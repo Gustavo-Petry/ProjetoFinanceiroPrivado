@@ -1,0 +1,48 @@
+.graficos-grid { display: grid; gap: 20px; }
+
+/* ── Selector card ── */
+.chart-selector-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.chart-selector-hint { margin-top: 10px; color: #8888aa; font-size: 12px; }
+
+/* ── Chart card title ── */
+.chart-card-title { margin-bottom: 16px; font-size: 14px; }
+
+/* ── Empty state ── */
+.empty-chart {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8888aa;
+  font-size: 13px;
+}
+
+/* ── Ranking ── */
+.ranking-list { display: grid; gap: 14px; }
+
+.ranking-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 7px;
+}
+
+.ranking-item-left { display: flex; align-items: center; gap: 8px; }
+
+.ranking-item-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8888aa;
+  width: 20px;
+}
+
+.ranking-item-name { font-weight: 700; font-size: 14px; }
+
+.ranking-item-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: #ff4757;
+  font-weight: 700;
+  font-size: 14px;
+}

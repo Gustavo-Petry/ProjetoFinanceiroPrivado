@@ -1,0 +1,145 @@
+.app-header {
+  background: #12121a;
+  border-bottom: 1px solid #ffffff12;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.app-header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  gap: 16px;
+}
+
+.app-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.app-logo-icon { font-size: 22px; }
+
+.app-logo-text {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  color: #c8f500;
+  letter-spacing: -0.5px;
+}
+
+.app-nav { display: flex; gap: 2px; }
+
+.app-nav-btn {
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  color: #8888aa;
+  cursor: pointer;
+  font-family: 'Syne', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.app-nav-btn:hover { color: #f0f0f8; }
+.app-nav-btn--active { background: #c8f500; color: #0a0a0f; }
+
+.app-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* ── Voice confirm modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000000bb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal-box { width: 380px; }
+
+.modal-title {
+  margin-bottom: 6px;
+  color: #c8f500;
+  font-size: 16px;
+}
+
+.modal-transcript {
+  color: #8888aa;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+
+.modal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #ffffff08;
+}
+
+.modal-row-label {
+  color: #8888aa;
+  font-size: 13px;
+}
+
+.modal-row-value { font-size: 14px; }
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-voice-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: #ff4757;
+  font-weight: 700;
+}
+
+.modal-invest-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: #00f5c8;
+  font-weight: 700;
+}
+
+.modal-caixinha-select {
+  width: auto;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+/* ── User menu ── */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #ffffff18;
+  object-fit: cover;
+}
+
+.user-logout {
+  font-size: 12px;
+  padding: 6px 12px;
+}

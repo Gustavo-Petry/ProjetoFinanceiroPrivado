@@ -1,0 +1,46 @@
+/* Shared form & layout helpers used across multiple components */
+
+.section-title {
+  font-size: 13px;
+  color: #8888aa;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  color: #8888aa;
+  font-size: 11px;
+  margin-bottom: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.empty-state {
+  color: #8888aa;
+  text-align: center;
+  padding: 24px 0;
+  font-size: 13px;
+}
+
+.remove-btn {
+  background: none;
+  border: none;
+  color: #8888aa;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;
+  transition: color 0.15s;
+}
+.remove-btn:hover { color: #ff4757; }
