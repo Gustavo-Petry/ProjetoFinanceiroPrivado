@@ -66,15 +66,15 @@ export default function Dashboard({ data }) {
     [data.fixedExpenses]
   )
 
-  const gastosMes   = gastosVariaveis + gastosFixos
-  const saldoLivre  = totalRenda - gastosMes - depositosCofrinhos
-  const pctGuardado = totalRenda > 0 ? ((saldoLivre / totalRenda) * 100).toFixed(0) : 0
-
   const depositosCofrinhos = useMemo(() =>
     (data.cofrinhos || []).reduce((s, c) =>
       s + c.deposits.filter(d => d.month === currentMonth).reduce((ss, d) => ss + d.amount, 0),
     0), [data.cofrinhos, currentMonth]
   )
+
+  const gastosMes   = gastosVariaveis + gastosFixos
+  const saldoLivre  = totalRenda - gastosMes - depositosCofrinhos
+  const pctGuardado = totalRenda > 0 ? ((saldoLivre / totalRenda) * 100).toFixed(0) : 0
 
   const totalGuardando = useMemo(() =>
     (data.goals || []).reduce((s, g) => s + (parseFloat(g.monthlySavings) || 0), 0),
