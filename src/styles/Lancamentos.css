@@ -1,4 +1,13 @@
-.lancamentos-grid { display: grid; gap: 20px; }
+/* Desktop: salário + form lado a lado; histórico abaixo ocupando tudo */
+.lancamentos-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.lancamentos-grid > .card:last-child {
+  grid-column: 1 / -1;
+}
 
 /* ── Salary & benefits card ── */
 .salary-wrap { margin-bottom: 18px; }
@@ -124,11 +133,32 @@
 }
 
 /* ── Responsive ── */
+@media (max-width: 768px) {
+  /* empilha tudo em coluna única no mobile */
+  .lancamentos-grid {
+    grid-template-columns: 1fr;
+  }
+  .lancamentos-grid > .card:last-child {
+    grid-column: auto;
+  }
+}
+
 @media (max-width: 640px) {
   .history-header      { flex-wrap: wrap; gap: 10px; }
   .sort-pills          { width: 100%; }
   .sort-pills .pill    { flex: 1; text-align: center; }
   .benefits-total-value { font-size: 18px; }
+  .benefits-total-label { font-size: 12px; }
+
+  /* itens do histórico */
   .tx-item             { padding: 10px 12px; gap: 8px; }
-  .tx-icon             { font-size: 18px; }
+  .tx-icon             { font-size: 18px; flex-shrink: 0; }
+  .tx-desc             { font-size: 13px; }
+  .tx-value            { font-size: 13px; }
+
+  /* campo de salário menor */
+  .salary-input        { font-size: 15px; }
+
+  /* cards com menos padding */
+  .lancamentos-grid .card { padding: 16px; }
 }
