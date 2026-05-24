@@ -24,14 +24,15 @@ const months       = getLast6Months()
 const currentMonth = months[5].key
 
 export default function Cofrinhos({ data, updateData, showToast }) {
-  const [form,        setForm]        = useState({ name: '', icon: '🐷', color: '#00f5c8' })
+  const [form,        setForm]        = useState({ name: '', icon: '🐷', color: '#00f5c8', initialValue: '' })
   const [depositForm, setDepositForm] = useState({})
   const [expanded,    setExpanded]    = useState(null)
 
   const cofrinhos = data.cofrinhos || []
 
   const totalGeral = useMemo(() =>
-    cofrinhos.reduce((s, c) => s + c.deposits.reduce((ss, d) => ss + d.amount, 0), 0),
+    cofrinhos.reduce((s, c) =>
+      s + (c.initialValue || 0) + c.deposits.reduce((ss, d) => ss + d.amount, 0), 0),
     [cofrinhos]
   )
 
@@ -45,10 +46,12 @@ export default function Cofrinhos({ data, updateData, showToast }) {
     if (!form.name.trim()) { showToast('Preencha o nome'); return }
     updateData({
       cofrinhos: [...cofrinhos, {
-        id: Date.now(), name: form.name, icon: form.icon, color: form.color, deposits: [],
+        id: Date.now(), name: form.name, icon: form.icon, color: form.color,
+        initialValue: parseFloat(form.initialValue) || 0,
+        deposits: [],
       }],
     })
-    setForm({ name: '', icon: '🐷', color: '#00f5c8' })
+    setForm({ name: '', icon: '🐷', color: '#00f5c8', initialValue: '' })
     showToast('Cofrinho criado!')
   }
 
@@ -103,7 +106,7 @@ export default function Cofrinhos({ data, updateData, showToast }) {
 
       {/* ── Lista de cofrinhos ── */}
       {cofrinhos.map(c => {
-        const total  = c.deposits.reduce((s, d) => s + d.amount, 0)
+        const total  = (c.initialValue || 0) + c.deposits.reduce((s, d) => s + d.amount, 0)
         const mesDep = c.deposits.filter(d => d.month === currentMonth).reduce((s, d) => s + d.amount, 0)
         const chartData = months.map(m => ({
           name:     m.label,
@@ -186,10 +189,19 @@ export default function Cofrinhos({ data, updateData, showToast }) {
                 </div>
 
                 {/* Histórico de depósitos */}
-                {c.deposits.length > 0 && (
+                {(c.deposits.length > 0 || c.initialValue > 0) && (
                   <div>
                     <div className="section-title">Histórico</div>
                     <div className="cof-deposits">
+                      {c.initialValue > 0 && (
+                        <div className="cof-deposit-item">
+                          <div className="cof-deposit-info">
+                            <span className="cof-deposit-value" style={{ color: '#8888aa' }}>{fmt(c.initialValue)}</span>
+                            <span className="cof-deposit-note">Valor inicial (não descontado)</span>
+                          </div>
+                          <span className="cof-deposit-date">—</span>
+                        </div>
+                      )}
                       {[...c.deposits].reverse().map(d => (
                         <div key={d.id} className="cof-deposit-item">
                           <div className="cof-deposit-info">
@@ -246,6 +258,21 @@ export default function Cofrinhos({ data, updateData, showToast }) {
             onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
             onKeyDown={e => e.key === 'Enter' && addCofrinho()}
           />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label className="form-label">Já tinha algum valor guardado? (R$) — opcional</label>
+          <input
+            type="number"
+            placeholder="0,00"
+            value={form.initialValue}
+            onChange={e => setForm(p => ({ ...p, initialValue: e.target.value }))}
+            onKeyDown={e => e.key === 'Enter' && addCofrinho()}
+            style={{ fontFamily: 'JetBrains Mono', color: '#00f5c8' }}
+          />
+          <div style={{ color: '#8888aa', fontSize: 11, marginTop: 4 }}>
+            Este valor não é descontado do salário — apenas registra o que você já tinha.
+          </div>
         </div>
 
         <button className="btn btn-green btn-full" onClick={addCofrinho}>+ Criar Cofrinho</button>
