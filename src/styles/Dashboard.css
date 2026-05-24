@@ -107,6 +107,18 @@
   gap: 16px;
 }
 
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .kpis-row        { grid-template-columns: repeat(2, 1fr); }
+  .charts-row      { grid-template-columns: 1fr; }
+  .projection-row  { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .kpis-row { grid-template-columns: 1fr 1fr; }
+  .kpi-value { font-size: 17px; }
+}
+
 .projection-label {
   color: #8888aa;
   font-size: 12px;

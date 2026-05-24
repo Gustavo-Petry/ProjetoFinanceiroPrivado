@@ -44,3 +44,7 @@
   transition: color 0.15s;
 }
 .remove-btn:hover { color: #ff4757; }
+
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; }
+}

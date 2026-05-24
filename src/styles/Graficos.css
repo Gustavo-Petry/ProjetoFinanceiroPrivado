@@ -46,3 +46,7 @@
   font-weight: 700;
   font-size: 14px;
 }
+
+@media (max-width: 640px) {
+  .chart-selector-pills { gap: 6px; }
+}

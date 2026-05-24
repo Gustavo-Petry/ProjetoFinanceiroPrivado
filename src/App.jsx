@@ -48,7 +48,7 @@ const VOICE_CATEGORIES = [
 ]
 
 export default function App() {
-  const [user,        setUser]        = useState(undefined) // undefined = carregando
+  const [user,        setUser]        = useState(undefined)
   const [data,        setData]        = useState(defaultState)
   const [activeTab,   setActiveTab]   = useState('dashboard')
   const [toast,       setToast]       = useState(null)
@@ -62,7 +62,6 @@ export default function App() {
     setTimeout(() => setToast(null), 3500)
   }, [])
 
-  // ── Auth listener ────────────────────────────────────────────────
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
       setUser(u || null)
@@ -73,7 +72,6 @@ export default function App() {
     })
   }, [])
 
-  // ── Carrega dados do Firestore quando o usuário loga ─────────────
   useEffect(() => {
     if (!user) return
     loadingRef.current = true
@@ -97,7 +95,6 @@ export default function App() {
     load()
   }, [user, showToast])
 
-  // ── Salva no Firestore com debounce de 1,5s ──────────────────────
   useEffect(() => {
     if (!user || loadingRef.current) return
     setSyncing(true)
@@ -116,7 +113,6 @@ export default function App() {
     setData(prev => ({ ...prev, ...updates }))
   }, [])
 
-  // ── Voice ────────────────────────────────────────────────────────
   const handleVoice = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SR) { showToast('Seu navegador não suporta reconhecimento de voz'); return }
@@ -164,7 +160,6 @@ export default function App() {
     setVoiceConfirm(null)
   }
 
-  // ── Estados de carregamento ──────────────────────────────────────
   if (user === undefined) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0f' }}>
@@ -176,63 +171,97 @@ export default function App() {
   if (user === null) return <Login />
 
   return (
-    <div>
-      {/* ── Header ── */}
-      <header className="app-header">
-        <div className="app-header-inner">
-          <div className="app-logo">
+    <div className="app-layout">
+
+      {/* ── Sidebar (desktop) ── */}
+      <aside className="app-sidebar">
+        <div className="app-logo">
+          <span className="app-logo-icon">🐷</span>
+          <span className="app-logo-text">Petry Finance</span>
+        </div>
+
+        <nav className="app-nav">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`app-nav-btn${activeTab === tab.id ? ' app-nav-btn--active' : ''}`}
+            >
+              <span>{tab.icon}</span>
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="app-sidebar-footer">
+          {syncing && <span className="app-syncing">💾 salvando...</span>}
+          <button
+            onClick={handleVoice}
+            className={`btn ${voiceActive ? 'btn-green pulse' : 'btn-ghost'}`}
+          >
+            🎙️ {voiceActive ? 'Ouvindo...' : 'Falar'}
+          </button>
+          <div className="user-menu">
+            {user.photoURL && (
+              <img src={user.photoURL} alt="" className="user-avatar" referrerPolicy="no-referrer" />
+            )}
+            <button className="btn btn-ghost user-logout" onClick={() => signOut(auth)}>
+              Sair
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Content area ── */}
+      <div className="app-content">
+
+        {/* Mobile top bar */}
+        <header className="app-mobile-header">
+          <div className="app-logo" style={{ margin: 0 }}>
             <span className="app-logo-icon">🐷</span>
             <span className="app-logo-text">Petry Finance</span>
           </div>
-
-          <nav className="app-nav">
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`app-nav-btn${activeTab === tab.id ? ' app-nav-btn--active' : ''}`}
-              >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </nav>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            {syncing && (
-              <span style={{ color: '#8888aa', fontSize: 12, fontFamily: 'Syne' }}>
-                💾 salvando...
-              </span>
-            )}
-
+          <div className="app-mobile-actions">
+            {syncing && <span style={{ color: '#8888aa', fontSize: 12 }}>💾</span>}
             <button
               onClick={handleVoice}
               className={`btn ${voiceActive ? 'btn-green pulse' : 'btn-ghost'}`}
+              style={{ padding: '7px 12px', fontSize: 13 }}
             >
-              🎙️ {voiceActive ? 'Ouvindo...' : 'Falar'}
+              🎙️
             </button>
-
-            <div className="user-menu">
-              {user.photoURL && (
-                <img src={user.photoURL} alt="" className="user-avatar" referrerPolicy="no-referrer" />
-              )}
-              <button className="btn btn-ghost user-logout" onClick={() => signOut(auth)}>
-                Sair
-              </button>
-            </div>
+            {user.photoURL && (
+              <img src={user.photoURL} alt="" className="user-avatar" referrerPolicy="no-referrer" />
+            )}
+            <button className="btn btn-ghost" style={{ padding: '7px 12px', fontSize: 12 }} onClick={() => signOut(auth)}>
+              Sair
+            </button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* ── Main ── */}
-      <main className="app-main">
-        {activeTab === 'dashboard'   && <Dashboard   data={data} />}
-        {activeTab === 'lancamentos' && <Lancamentos data={data} updateData={updateData} showToast={showToast} />}
-        {activeTab === 'fixos'       && <Fixos       data={data} updateData={updateData} showToast={showToast} />}
-        {activeTab === 'combustivel' && <Combustivel data={data} updateData={updateData} showToast={showToast} />}
-        {activeTab === 'objetivos'   && <Objetivos   data={data} updateData={updateData} showToast={showToast} />}
-        {activeTab === 'graficos'    && <Graficos    data={data} />}
-      </main>
+        <main className="app-main">
+          {activeTab === 'dashboard'   && <Dashboard   data={data} />}
+          {activeTab === 'lancamentos' && <Lancamentos data={data} updateData={updateData} showToast={showToast} />}
+          {activeTab === 'fixos'       && <Fixos       data={data} updateData={updateData} showToast={showToast} />}
+          {activeTab === 'combustivel' && <Combustivel data={data} updateData={updateData} showToast={showToast} />}
+          {activeTab === 'objetivos'   && <Objetivos   data={data} updateData={updateData} showToast={showToast} />}
+          {activeTab === 'graficos'    && <Graficos    data={data} />}
+        </main>
+      </div>
+
+      {/* ── Bottom nav (mobile) ── */}
+      <nav className="app-bottom-nav">
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`app-bottom-nav-btn${activeTab === tab.id ? ' app-bottom-nav-btn--active' : ''}`}
+          >
+            <span className="app-bottom-nav-icon">{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </nav>
 
       {/* ── Voice confirm modal ── */}
       {voiceConfirm && (

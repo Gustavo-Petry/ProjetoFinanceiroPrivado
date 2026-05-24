@@ -188,6 +188,16 @@
   font-size: 13px;
 }
 
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .obj-summary-row { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 480px) {
+  .obj-summary-row { grid-template-columns: repeat(2, 1fr); }
+  .obj-goal-monthly { font-size: 17px; }
+  .obj-bar-legend { flex-wrap: wrap; gap: 10px; }
+}
+
 /* ── Alerta de sobra negativa ── */
 .obj-alert {
   background: #ff475715;
