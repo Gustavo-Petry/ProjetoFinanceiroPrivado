@@ -48,3 +48,23 @@
 @media (max-width: 640px) {
   .form-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Icon selector (Objetivos + Cofrinhos) ── */
+.icon-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.icon-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 4px 6px;
+  transition: all 0.15s;
+}
+.icon-btn--active   { background: #c8f50020; border-color: #c8f50060; }
+.icon-btn--inactive { opacity: 0.5; }
+.icon-btn--inactive:hover { opacity: 1; background: #ffffff08; }

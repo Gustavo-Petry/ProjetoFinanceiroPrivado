@@ -1,0 +1,122 @@
+.cofrinhos-grid { display: grid; gap: 20px; }
+
+/* ── Resumo ── */
+.cofrinhos-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.cof-summary-card {
+  background: #1a1a26;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.cof-summary-label {
+  font-size: 11px;
+  color: #8888aa;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+
+.cof-summary-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* ── Card ── */
+.cof-card { cursor: default; }
+
+.cof-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  gap: 12px;
+}
+
+.cof-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.cof-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.cof-name { font-weight: 700; font-size: 16px; }
+.cof-meta { font-size: 13px; color: #8888aa; margin-top: 4px; }
+
+/* ── Body (expandido) ── */
+.cof-body {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #ffffff08;
+}
+
+/* ── Formulário de depósito ── */
+.cof-deposit-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+/* ── Histórico ── */
+.cof-deposits { display: grid; gap: 6px; }
+
+.cof-deposit-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #1a1a26;
+  border-radius: 10px;
+}
+
+.cof-deposit-info  { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cof-deposit-value { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+.cof-deposit-note  { font-size: 12px; color: #8888aa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cof-deposit-date  { font-size: 12px; color: #8888aa; flex-shrink: 0; }
+
+/* ── Color selector ── */
+.cof-color-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cof-color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.cof-color-btn:hover { transform: scale(1.2); }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .cofrinhos-summary    { grid-template-columns: 1fr 1fr; }
+  .cof-summary-value    { font-size: 16px; }
+  .cof-deposit-form     { grid-template-columns: 1fr; }
+  .cof-deposit-btn      { width: 100%; }
+  .cof-icon             { width: 40px; height: 40px; font-size: 20px; }
+  .cof-name             { font-size: 14px; }
+}

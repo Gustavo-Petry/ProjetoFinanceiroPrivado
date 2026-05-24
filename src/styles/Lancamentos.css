@@ -122,3 +122,13 @@
   font-weight: 700;
   flex-shrink: 0;
 }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .history-header      { flex-wrap: wrap; gap: 10px; }
+  .sort-pills          { width: 100%; }
+  .sort-pills .pill    { flex: 1; text-align: center; }
+  .benefits-total-value { font-size: 18px; }
+  .tx-item             { padding: 10px 12px; gap: 8px; }
+  .tx-icon             { font-size: 18px; }
+}

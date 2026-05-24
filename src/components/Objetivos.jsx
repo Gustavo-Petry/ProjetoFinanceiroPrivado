@@ -44,8 +44,17 @@ export default function Objetivos({ data, updateData, showToast }) {
     [data.fixedExpenses]
   )
 
+  const now          = new Date()
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+  const depositosCofrinhos = useMemo(() =>
+    (data.cofrinhos || []).reduce((s, c) =>
+      s + c.deposits.filter(d => d.month === currentMonth).reduce((ss, d) => ss + d.amount, 0),
+    0), [data.cofrinhos, currentMonth]
+  )
+
   const goals      = data.goals || []
-  const disponivel = totalRenda - totalFixos
+  const disponivel = totalRenda - totalFixos - depositosCofrinhos
 
   // ── Compute ideal monthly for each goal based on target date ──
   const goalsCalc = useMemo(() => goals.map(g => {
@@ -74,9 +83,10 @@ export default function Objetivos({ data, updateData, showToast }) {
   const totalGuardando = goalsWithAdj.reduce((s, g) => s + (g.achieved ? 0 : g.adjMonthly), 0)
   const sobra          = disponivel - totalGuardando
 
-  const pctFixos = totalRenda > 0 ? Math.min((totalFixos / totalRenda) * 100, 100) : 0
-  const pctGoals = totalRenda > 0 ? Math.min((totalGuardando / totalRenda) * 100, 100 - pctFixos) : 0
-  const pctSobra = Math.max(0, 100 - pctFixos - pctGoals)
+  const pctFixos     = totalRenda > 0 ? Math.min((totalFixos / totalRenda) * 100, 100) : 0
+  const pctCofrinhos = totalRenda > 0 ? Math.min((depositosCofrinhos / totalRenda) * 100, 100 - pctFixos) : 0
+  const pctGoals     = totalRenda > 0 ? Math.min((totalGuardando / totalRenda) * 100, 100 - pctFixos - pctCofrinhos) : 0
+  const pctSobra     = Math.max(0, 100 - pctFixos - pctCofrinhos - pctGoals)
 
   // ── CRUD ──
   const addGoal = () => {
@@ -125,23 +135,26 @@ export default function Objetivos({ data, updateData, showToast }) {
         <div className="section-title">Planejamento Mensal</div>
 
         <div className="obj-summary-row">
-          <SCard label="Renda Total"   value={fmt(totalRenda)}       color="#c8f500" />
-          <SCard label="Gastos Fixos"  value={`-${fmt(totalFixos)}`} color="#ff4757" />
-          <SCard label="Disponível"    value={fmt(disponivel)}       color={disponivel >= 0 ? '#ffa502' : '#ff4757'} />
-          <SCard label="Guardando/mês" value={fmt(totalGuardando)}   color="#00f5c8" />
-          <SCard label="Sobra Livre"   value={fmt(sobra)}            color={sobra >= 0 ? '#c8f500' : '#ff4757'} />
+          <SCard label="Renda Total"    value={fmt(totalRenda)}            color="#c8f500" />
+          <SCard label="Gastos Fixos"  value={`-${fmt(totalFixos)}`}     color="#ff4757" />
+          <SCard label="Cofrinhos/mês" value={`-${fmt(depositosCofrinhos)}`} color="#00f5c8" />
+          <SCard label="Disponível"    value={fmt(disponivel)}            color={disponivel >= 0 ? '#ffa502' : '#ff4757'} />
+          <SCard label="Guardando/mês" value={fmt(totalGuardando)}        color="#a78bfa" />
+          <SCard label="Sobra Livre"   value={fmt(sobra)}                 color={sobra >= 0 ? '#c8f500' : '#ff4757'} />
         </div>
 
         {totalRenda > 0 && (
           <>
             <div className="obj-planning-bar">
-              <div className="obj-bar-segment obj-bar-fixos" style={{ width: `${pctFixos}%` }} />
-              <div className="obj-bar-segment obj-bar-goals" style={{ width: `${pctGoals}%` }} />
-              <div className="obj-bar-segment obj-bar-sobra" style={{ width: `${pctSobra}%` }} />
+              <div className="obj-bar-segment obj-bar-fixos"     style={{ width: `${pctFixos}%` }} />
+              <div className="obj-bar-segment"                   style={{ width: `${pctCofrinhos}%`, background: '#00f5c8' }} />
+              <div className="obj-bar-segment obj-bar-goals"     style={{ width: `${pctGoals}%` }} />
+              <div className="obj-bar-segment obj-bar-sobra"     style={{ width: `${pctSobra}%` }} />
             </div>
             <div className="obj-bar-legend">
               <span><span className="obj-legend-dot" style={{ background: '#ff4757' }} />Fixos {pctFixos.toFixed(0)}%</span>
-              <span><span className="obj-legend-dot" style={{ background: '#00f5c8' }} />Objetivos {pctGoals.toFixed(0)}%</span>
+              <span><span className="obj-legend-dot" style={{ background: '#00f5c8' }} />Cofrinhos {pctCofrinhos.toFixed(0)}%</span>
+              <span><span className="obj-legend-dot" style={{ background: '#a78bfa' }} />Objetivos {pctGoals.toFixed(0)}%</span>
               <span><span className="obj-legend-dot" style={{ background: '#c8f500' }} />Livre {pctSobra.toFixed(0)}%</span>
             </div>
           </>

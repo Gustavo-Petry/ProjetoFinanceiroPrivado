@@ -5,6 +5,7 @@ import { db, auth }                     from './firebase'
 import Dashboard    from './components/Dashboard'
 import Lancamentos  from './components/Lancamentos'
 import Fixos        from './components/Fixos'
+import Cofrinhos    from './components/Cofrinhos'
 import Combustivel  from './components/Combustivel'
 import Objetivos    from './components/Objetivos'
 import Graficos     from './components/Graficos'
@@ -27,12 +28,14 @@ const defaultState = {
   fixedExpenses: [],
   fuelExpenses: [],
   goals: [],
+  cofrinhos: [],
 }
 
 const TABS = [
   { id: 'dashboard',   label: 'Dashboard',   icon: '◈' },
   { id: 'lancamentos', label: 'Lançamentos', icon: '⊕' },
   { id: 'fixos',       label: 'Fixos',       icon: '⊡' },
+  { id: 'cofrinhos',   label: 'Cofrinhos',   icon: '🐷' },
   { id: 'combustivel', label: 'Combustível', icon: '⛽' },
   { id: 'objetivos',   label: 'Objetivos',   icon: '🎯' },
   { id: 'graficos',    label: 'Gráficos',    icon: '◧' },
@@ -243,6 +246,7 @@ export default function App() {
           {activeTab === 'dashboard'   && <Dashboard   data={data} />}
           {activeTab === 'lancamentos' && <Lancamentos data={data} updateData={updateData} showToast={showToast} />}
           {activeTab === 'fixos'       && <Fixos       data={data} updateData={updateData} showToast={showToast} />}
+          {activeTab === 'cofrinhos'   && <Cofrinhos   data={data} updateData={updateData} showToast={showToast} />}
           {activeTab === 'combustivel' && <Combustivel data={data} updateData={updateData} showToast={showToast} />}
           {activeTab === 'objetivos'   && <Objetivos   data={data} updateData={updateData} showToast={showToast} />}
           {activeTab === 'graficos'    && <Graficos    data={data} />}

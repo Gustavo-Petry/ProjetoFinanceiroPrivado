@@ -226,21 +226,27 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
+    gap: 2px;
     background: none;
     border: none;
     color: #8888aa;
     font-family: 'Syne', sans-serif;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
-    padding: 8px 2px;
+    padding: 7px 1px;
     cursor: pointer;
     transition: color 0.2s;
   }
 
   .app-bottom-nav-btn--active { color: #c8f500; }
 
-  .app-bottom-nav-icon { font-size: 20px; }
+  .app-bottom-nav-icon { font-size: 18px; }
+
+  @media (max-width: 400px) {
+    .app-bottom-nav-btn span:last-child { display: none; }
+    .app-bottom-nav-icon { font-size: 20px; }
+    .app-bottom-nav-btn { padding: 10px 0; }
+  }
 
   .app-main {
     padding: 14px 14px 90px;

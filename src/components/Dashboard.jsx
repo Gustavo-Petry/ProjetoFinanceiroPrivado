@@ -67,8 +67,14 @@ export default function Dashboard({ data }) {
   )
 
   const gastosMes   = gastosVariaveis + gastosFixos
-  const saldoLivre  = totalRenda - gastosMes
+  const saldoLivre  = totalRenda - gastosMes - depositosCofrinhos
   const pctGuardado = totalRenda > 0 ? ((saldoLivre / totalRenda) * 100).toFixed(0) : 0
+
+  const depositosCofrinhos = useMemo(() =>
+    (data.cofrinhos || []).reduce((s, c) =>
+      s + c.deposits.filter(d => d.month === currentMonth).reduce((ss, d) => ss + d.amount, 0),
+    0), [data.cofrinhos, currentMonth]
+  )
 
   const totalGuardando = useMemo(() =>
     (data.goals || []).reduce((s, g) => s + (parseFloat(g.monthlySavings) || 0), 0),
@@ -80,9 +86,11 @@ export default function Dashboard({ data }) {
       const d   = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const label = d.toLocaleDateString('pt-BR', { month: 'short' })
+      const cofMes = (data.cofrinhos || []).reduce((s, c) =>
+        s + c.deposits.filter(d => d.month === key).reduce((ss, d) => ss + d.amount, 0), 0)
       const gastos = data.transactions
         .filter(t => t.date?.startsWith(key))
-        .reduce((s, t) => s + (parseFloat(t.value) || 0), 0) + gastosFixos
+        .reduce((s, t) => s + (parseFloat(t.value) || 0), 0) + gastosFixos + cofMes
       return { name: label, Renda: totalRenda, Gastos: gastos }
     }),
     [data.transactions, totalRenda, gastosFixos]
@@ -123,8 +131,10 @@ export default function Dashboard({ data }) {
           badge={`${pctGuardado}% guardado`}
         />
         <KPICard
-          title="Guardando/mês" value={fmt(totalGuardando)} color="#00f5c8"
-          sub={(data.goals || []).length > 0 ? `${(data.goals || []).length} objetivo${(data.goals || []).length > 1 ? 's' : ''}` : undefined}
+          title="Cofrinhos este mês"
+          value={fmt(depositosCofrinhos)}
+          color="#00f5c8"
+          sub={(data.cofrinhos || []).length > 0 ? `${(data.cofrinhos || []).length} cofrinho${(data.cofrinhos || []).length > 1 ? 's' : ''}` : 'Nenhum cofrinho'}
         />
       </div>
 
@@ -220,6 +230,25 @@ export default function Dashboard({ data }) {
                   <div className="caixinha-mini-icon">{g.icon}</div>
                   <div className="caixinha-mini-name">{g.name}</div>
                   <div className="caixinha-mini-value" style={{ color }}>{pct.toFixed(0)}%</div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Cofrinhos preview */}
+      {(data.cofrinhos || []).length > 0 && (
+        <div className="card" style={{ borderColor: '#00f5c830' }}>
+          <div className="section-title">🐷 Cofrinhos</div>
+          <div className="caixinhas-preview-row">
+            {(data.cofrinhos || []).map(c => {
+              const total = c.deposits.reduce((s, d) => s + d.amount, 0)
+              return (
+                <div key={c.id} className="caixinha-mini" style={{ borderLeft: `3px solid ${c.color}` }}>
+                  <div className="caixinha-mini-icon">{c.icon}</div>
+                  <div className="caixinha-mini-name">{c.name}</div>
+                  <div className="caixinha-mini-value" style={{ color: c.color }}>{fmt(total)}</div>
                 </div>
               )
             })}

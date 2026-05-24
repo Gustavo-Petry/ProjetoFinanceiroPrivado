@@ -3,7 +3,7 @@
 /* ── Resumo mensal ── */
 .obj-summary-row {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -189,13 +189,13 @@
 }
 
 /* ── Responsive ── */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .obj-summary-row { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 480px) {
   .obj-summary-row { grid-template-columns: repeat(2, 1fr); }
   .obj-goal-monthly { font-size: 17px; }
-  .obj-bar-legend { flex-wrap: wrap; gap: 10px; }
+  .obj-bar-legend { flex-wrap: wrap; gap: 8px; }
 }
 
 /* ── Alerta de sobra negativa ── */
