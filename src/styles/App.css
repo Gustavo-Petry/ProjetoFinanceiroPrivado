@@ -189,6 +189,12 @@
 @media (max-width: 768px) {
   .app-sidebar { display: none; }
 
+  .app-layout,
+  .app-content {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
   .app-mobile-header {
     display: flex;
     align-items: center;
