@@ -25,10 +25,11 @@ const _now = new Date()
 const currentMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`
 
 export default function Objetivos({ data, updateData, showToast }) {
+  // Apenas salário + benefícios livres contam para objetivos
   const totalRenda = useMemo(() => {
     const sal = parseFloat(data.salary) || 0
     const ben = Object.values(data.benefits).reduce(
-      (s, b) => s + (b.enabled ? (parseFloat(b.value) || 0) : 0), 0
+      (s, b) => s + (b.enabled && b.free ? (parseFloat(b.value) || 0) : 0), 0
     )
     return sal + ben
   }, [data.salary, data.benefits])
@@ -44,7 +45,39 @@ export default function Objetivos({ data, updateData, showToast }) {
     0), [data.cofrinhos]
   )
 
-  const goals   = useMemo(() =>
+  // Transações do mês atual (para calcular o usado por fonte)
+  const monthTx = useMemo(() =>
+    data.transactions.filter(t => t.date?.startsWith(currentMonth)),
+    [data.transactions]
+  )
+
+  // Depósitos em cofrinhos no mês atual (com paidFrom)
+  const allCurrentDeposits = useMemo(() =>
+    (data.cofrinhos || []).flatMap(c =>
+      c.deposits.filter(d => d.month === currentMonth && d.paidFrom)
+    ), [data.cofrinhos]
+  )
+
+  // Fontes livres: salário + benefícios com free:true
+  const freeSources = useMemo(() => {
+    const sources = []
+    if (data.salary) {
+      const usedTx  = monthTx.filter(t => t.paidFrom === 'salary').reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
+      const usedDep = allCurrentDeposits.filter(d => d.paidFrom === 'salary').reduce((s, d) => s + d.amount, 0)
+      const total   = parseFloat(data.salary) || 0
+      sources.push({ key: 'salary', label: 'Salário', icon: '💵', color: '#c8f500', total, remaining: total - usedTx - usedDep })
+    }
+    Object.entries(data.benefits).forEach(([key, b]) => {
+      if (!b.enabled || !b.value || !b.free) return
+      const usedTx  = monthTx.filter(t => t.paidFrom === key).reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
+      const usedDep = allCurrentDeposits.filter(d => d.paidFrom === key).reduce((s, d) => s + d.amount, 0)
+      const total   = parseFloat(b.value) || 0
+      sources.push({ key, label: b.label, icon: b.icon, color: b.color, total, remaining: total - usedTx - usedDep })
+    })
+    return sources
+  }, [data.salary, data.benefits, monthTx, allCurrentDeposits])
+
+  const goals = useMemo(() =>
     (data.cofrinhos || []).filter(c => c.isGoal),
     [data.cofrinhos]
   )
@@ -82,20 +115,20 @@ export default function Objetivos({ data, updateData, showToast }) {
   const pctGoals     = totalRenda > 0 ? Math.min((totalGuardando / totalRenda) * 100, 100 - pctFixos - pctCofrinhos) : 0
   const pctSobra     = Math.max(0, 100 - pctFixos - pctCofrinhos - pctGoals)
 
-  // updateCofrinho: patch any cofrinho by id
   const updateCofrinho = (id, changes) =>
     updateData({
       cofrinhos: (data.cofrinhos || []).map(c => c.id === id ? { ...c, ...changes } : c),
     })
 
-  // addGoalDeposit: add deposit to a goal-cofrinho (deducted from salary via depositosCofrinhos)
-  const addGoalDeposit = (cofrinhoId, amount, note) => {
+  const addGoalDeposit = (cofrinhoId, amount, note, paidFrom) => {
     if (!amount || amount <= 0) { showToast('Informe um valor válido'); return }
     updateData({
       cofrinhos: (data.cofrinhos || []).map(c => c.id === cofrinhoId
         ? { ...c, deposits: [...c.deposits, {
             id: Date.now(), amount, note: note || '',
-            date: new Date().toISOString().split('T')[0], month: currentMonth,
+            date: new Date().toISOString().split('T')[0],
+            month: currentMonth,
+            paidFrom: paidFrom || 'salary',
           }]}
         : c
       ),
@@ -116,12 +149,12 @@ export default function Objetivos({ data, updateData, showToast }) {
         <div className="section-title">Planejamento Mensal</div>
 
         <div className="obj-summary-row">
-          <SCard label="Renda Total"    value={fmt(totalRenda)}                color="#c8f500" />
-          <SCard label="Gastos Fixos"   value={`-${fmt(totalFixos)}`}          color="#ff4757" />
-          <SCard label="Cofrinhos/mês"  value={fmt(depositosCofrinhos)}        color="#00f5c8" />
-          <SCard label="Disponível"     value={fmt(disponivel)}                color={disponivel >= 0 ? '#ffa502' : '#ff4757'} />
-          <SCard label="Sugestão/mês"   value={fmt(totalGuardando)}            color="#a78bfa" />
-          <SCard label="Sobra Livre"    value={fmt(sobra)}                     color={sobra >= 0 ? '#c8f500' : '#ff4757'} />
+          <SCard label="Renda Livre"   value={fmt(totalRenda)}                color="#c8f500" />
+          <SCard label="Gastos Fixos"  value={`-${fmt(totalFixos)}`}          color="#ff4757" />
+          <SCard label="Cofrinhos/mês" value={fmt(depositosCofrinhos)}        color="#00f5c8" />
+          <SCard label="Disponível"    value={fmt(disponivel)}                color={disponivel >= 0 ? '#ffa502' : '#ff4757'} />
+          <SCard label="Sugestão/mês"  value={fmt(totalGuardando)}            color="#a78bfa" />
+          <SCard label="Sobra Livre"   value={fmt(sobra)}                     color={sobra >= 0 ? '#c8f500' : '#ff4757'} />
         </div>
 
         {totalRenda > 0 && (
@@ -139,6 +172,38 @@ export default function Objetivos({ data, updateData, showToast }) {
               <span><span className="obj-legend-dot" style={{ background: '#c8f500' }} />Livre {pctSobra.toFixed(0)}%</span>
             </div>
           </>
+        )}
+
+        {/* Disponível por fonte */}
+        {freeSources.length > 0 && (
+          <div style={{ marginTop: 20 }}>
+            <div className="obj-sources-label">Disponível por fonte (livre)</div>
+            <div className="obj-sources-grid">
+              {freeSources.map(src => {
+                const used = src.total - src.remaining
+                const pct  = src.total > 0 ? Math.min((used / src.total) * 100, 100) : 0
+                return (
+                  <div key={src.key} className="obj-source-card" style={{ borderColor: src.color + '30' }}>
+                    <div className="obj-source-header">
+                      <span>{src.icon}</span>
+                      <span className="obj-source-name" style={{ color: src.color }}>{src.label}</span>
+                    </div>
+                    <div className="obj-source-remaining" style={{ color: src.remaining >= 0 ? src.color : '#ff4757' }}>
+                      {fmt(src.remaining)}
+                    </div>
+                    <div className="obj-source-total">de {fmt(src.total)}</div>
+                    <div className="progress-bar" style={{ marginTop: 6 }}>
+                      <div style={{
+                        background: src.remaining <= 0 ? '#ff4757' : src.color,
+                        height: '100%', borderRadius: 10,
+                        width: `${pct}%`, transition: 'width 0.5s',
+                      }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         )}
 
         {hasConflict && (
@@ -173,6 +238,7 @@ export default function Objetivos({ data, updateData, showToast }) {
               {primary.map(g => (
                 <GoalCard
                   key={g.id} goal={g}
+                  freeSources={freeSources}
                   onDeposit={addGoalDeposit}
                   onUpdate={updateCofrinho}
                   onRemove={removeFromGoals}
@@ -186,6 +252,7 @@ export default function Objetivos({ data, updateData, showToast }) {
               {secondary.map(g => (
                 <GoalCard
                   key={g.id} goal={g}
+                  freeSources={freeSources}
                   onDeposit={addGoalDeposit}
                   onUpdate={updateCofrinho}
                   onRemove={removeFromGoals}
@@ -211,20 +278,23 @@ function SCard({ label, value, color }) {
   )
 }
 
-function GoalCard({ goal, onDeposit, onUpdate, onRemove }) {
-  const [depAmount, setDepAmount] = useState('')
-  const [depNote,   setDepNote]   = useState('')
-  const [editing,   setEditing]   = useState(false)
-  const [editTarget, setEditTarget] = useState(String(goal.targetValue || ''))
-  const [editDate,   setEditDate]   = useState(goal.targetDate || '')
+function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources }) {
+  const [depAmount,   setDepAmount]   = useState('')
+  const [depNote,     setDepNote]     = useState('')
+  const [depPaidFrom, setDepPaidFrom] = useState(freeSources[0]?.key || 'salary')
+  const [editing,     setEditing]     = useState(false)
+  const [editTarget,  setEditTarget]  = useState(String(goal.targetValue || ''))
+  const [editDate,    setEditDate]    = useState(goal.targetDate || '')
 
   const pct       = goal.target > 0 ? Math.min((goal.saved / goal.target) * 100, 100) : 0
   const isPrimary = goal.priority === 'primary'
   const color     = isPrimary ? '#c8f500' : '#00f5c8'
 
+  const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+
   const handleDeposit = () => {
     const amount = parseFloat(depAmount)
-    onDeposit(goal.id, amount, depNote)
+    onDeposit(goal.id, amount, depNote, depPaidFrom)
     setDepAmount('')
     setDepNote('')
   }
@@ -236,6 +306,8 @@ function GoalCard({ goal, onDeposit, onUpdate, onRemove }) {
     })
     setEditing(false)
   }
+
+  const selectedSource = freeSources.find(s => s.key === depPaidFrom)
 
   return (
     <div className={`card obj-goal-card ${isPrimary ? 'obj-goal-primary' : 'obj-goal-secondary'}`}>
@@ -294,9 +366,28 @@ function GoalCard({ goal, onDeposit, onUpdate, onRemove }) {
         </>
       )}
 
-      {/* Depositar valor (descontado do salário) */}
+      {/* Guardar valor */}
       <div style={{ marginTop: 14 }}>
-        <div className="section-title" style={{ marginBottom: 8 }}>Guardar valor (descontado do salário)</div>
+        <div className="section-title" style={{ marginBottom: 8 }}>Guardar valor</div>
+
+        {freeSources.length > 0 && (
+          <div style={{ marginBottom: 8 }}>
+            <label className="form-label">Debitar de</label>
+            <select value={depPaidFrom} onChange={e => setDepPaidFrom(e.target.value)}>
+              {freeSources.map(s => (
+                <option key={s.key} value={s.key}>
+                  {s.icon} {s.label} — {fmt(Math.max(s.remaining, 0))} disponível
+                </option>
+              ))}
+            </select>
+            {selectedSource && selectedSource.remaining <= 0 && (
+              <div style={{ color: '#ff4757', fontSize: 12, marginTop: 4 }}>
+                ⚠️ Saldo esgotado nesta fonte
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="obj-deposit-row">
           <input
             type="number" placeholder="Valor (R$)"

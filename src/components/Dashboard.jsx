@@ -143,26 +143,33 @@ export default function Dashboard({ data }) {
 
   const enabledBenefits = Object.entries(data.benefits).filter(([, b]) => b.enabled && b.value)
 
-  // Dynamic income: each source minus transactions allocated to it this month
+  // Depósitos em cofrinhos do mês atual com paidFrom definido
+  const allCurrentDeposits = useMemo(() =>
+    (data.cofrinhos || []).flatMap(c =>
+      c.deposits.filter(d => d.month === currentMonth && d.paidFrom)
+    ), [data.cofrinhos, currentMonth]
+  )
+
+  // Dynamic income: each source minus transactions + goal deposits allocated to it this month
   const incomeSources = useMemo(() => {
     const sources = []
     if (data.salary) {
-      const used = monthTx
-        .filter(t => t.paidFrom === 'salary')
-        .reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
-      const total = parseFloat(data.salary) || 0
+      const usedTx  = monthTx.filter(t => t.paidFrom === 'salary').reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
+      const usedDep = allCurrentDeposits.filter(d => d.paidFrom === 'salary').reduce((s, d) => s + d.amount, 0)
+      const total   = parseFloat(data.salary) || 0
+      const used    = usedTx + usedDep
       sources.push({ key: 'salary', label: 'Salário', icon: '💵', color: '#c8f500', total, used, remaining: total - used })
     }
     Object.entries(data.benefits).forEach(([key, b]) => {
       if (!b.enabled || !b.value) return
-      const used = monthTx
-        .filter(t => t.paidFrom === key)
-        .reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
-      const total = parseFloat(b.value) || 0
+      const usedTx  = monthTx.filter(t => t.paidFrom === key).reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
+      const usedDep = allCurrentDeposits.filter(d => d.paidFrom === key).reduce((s, d) => s + d.amount, 0)
+      const total   = parseFloat(b.value) || 0
+      const used    = usedTx + usedDep
       sources.push({ key, label: b.label, icon: b.icon, color: b.color, total, used, remaining: total - used })
     })
     return sources
-  }, [data.salary, data.benefits, monthTx])
+  }, [data.salary, data.benefits, monthTx, allCurrentDeposits])
 
   const budgets = data.budgets || {}
   const hasBudgets = Object.values(budgets).some(v => parseFloat(v) > 0)

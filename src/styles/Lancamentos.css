@@ -66,6 +66,17 @@
   padding-left: 28px;
 }
 
+.benefit-free-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0 2px 28px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.benefit-free-label { font-size: 12px; }
+
 .benefits-total {
   border-top: 1px solid #ffffff12;
   margin-top: 18px;

@@ -136,14 +136,27 @@ export default function Lancamentos({ data, updateData, showToast }) {
                 </span>
               </div>
               {b.enabled && (
-                <div className="benefit-value-wrap">
-                  <input
-                    type="number" placeholder="R$ 0,00"
-                    value={b.value}
-                    onChange={e => handleBenefit(key, 'value', e.target.value)}
-                    style={{ borderColor: b.color + '50', color: b.color, fontFamily: 'JetBrains Mono' }}
-                  />
-                </div>
+                <>
+                  <div className="benefit-value-wrap">
+                    <input
+                      type="number" placeholder="R$ 0,00"
+                      value={b.value}
+                      onChange={e => handleBenefit(key, 'value', e.target.value)}
+                      style={{ borderColor: b.color + '50', color: b.color, fontFamily: 'JetBrains Mono' }}
+                    />
+                  </div>
+                  <div className="benefit-free-wrap" onClick={() => handleBenefit(key, 'free', !b.free)}>
+                    <div
+                      className={`custom-checkbox${b.free ? ' custom-checkbox--checked' : ''}`}
+                      style={b.free ? { background: '#c8f500', borderColor: '#c8f500' } : {}}
+                    >
+                      {b.free && '✓'}
+                    </div>
+                    <span className="benefit-free-label" style={{ color: b.free ? '#c8f500' : '#555577' }}>
+                      É livre (pode usar pra qualquer coisa)
+                    </span>
+                  </div>
+                </>
               )}
             </div>
           ))}

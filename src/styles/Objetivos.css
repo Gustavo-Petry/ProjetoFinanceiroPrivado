@@ -220,6 +220,52 @@
   .obj-edit-row    { grid-template-columns: 1fr; }
 }
 
+/* ── Fontes livres disponíveis ── */
+.obj-sources-label {
+  font-size: 11px;
+  color: #8888aa;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.obj-sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.obj-source-card {
+  background: #1a1a26;
+  border: 1px solid;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.obj-source-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.obj-source-name { font-weight: 700; }
+
+.obj-source-remaining {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.obj-source-total {
+  font-size: 11px;
+  color: #8888aa;
+  margin-top: 2px;
+}
+
 /* ── Alerta de sobra negativa ── */
 .obj-alert {
   background: #ff475715;
