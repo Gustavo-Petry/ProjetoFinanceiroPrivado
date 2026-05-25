@@ -1,0 +1,199 @@
+.dashboard-grid { display: grid; gap: 20px; }
+
+/* ── KPIs ── */
+.kpis-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.kpi-title {
+  color: #8888aa;
+  font-size: 11px;
+  margin-bottom: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.kpi-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.kpi-badge {
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  margin-top: 8px;
+  display: inline-block;
+  font-weight: 600;
+}
+
+.kpi-sub {
+  color: #8888aa;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* ── Income composition ── */
+.income-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.income-item {
+  border-radius: 12px;
+  padding: 10px 16px;
+}
+
+.income-item-label {
+  font-size: 11px;
+  color: #8888aa;
+  margin-bottom: 4px;
+}
+
+.income-item-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+
+/* ── Charts row ── */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.empty-chart {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8888aa;
+  font-size: 13px;
+}
+
+/* ── Caixinhas preview ── */
+.caixinhas-preview-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.caixinha-mini {
+  background: #1a1a26;
+  border-radius: 12px;
+  padding: 14px 18px;
+  min-width: 140px;
+}
+
+.caixinha-mini-icon { font-size: 24px; margin-bottom: 6px; }
+.caixinha-mini-name { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+
+.caixinha-mini-value {
+  font-family: 'JetBrains Mono', monospace;
+  color: #00f5c8;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* ── Projection ── */
+.projection-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .kpis-row        { grid-template-columns: repeat(2, 1fr); }
+  .charts-row      { grid-template-columns: 1fr; }
+  .projection-row  { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .kpis-row { grid-template-columns: 1fr 1fr; }
+  .kpi-value { font-size: 17px; }
+}
+
+.projection-label {
+  color: #8888aa;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.projection-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+/* ── Income sources (dynamic) ── */
+.income-sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.income-source-card {
+  background: #1a1a26;
+  border: 1px solid #ffffff12;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.income-source-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.income-source-icon  { font-size: 16px; }
+.income-source-label { font-size: 12px; color: #8888aa; font-weight: 600; }
+
+.income-source-remaining {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.income-source-total {
+  font-size: 11px;
+  color: #8888aa;
+  margin-top: 2px;
+}
+
+.income-source-meta {
+  font-size: 11px;
+  color: #8888aa;
+  margin-top: 4px;
+}
+
+/* ── Budget bars ── */
+.budget-bars-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.budget-bar-item { display: grid; gap: 4px; }
+
+.budget-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.budget-bar-label { font-size: 13px; font-weight: 600; }
+
+.budget-bar-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
