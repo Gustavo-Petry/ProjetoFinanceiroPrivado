@@ -185,6 +185,20 @@
   font-size: 13px;
 }
 
+/* ── Footer ── */
+.app-footer {
+  text-align: center;
+  padding: 18px 24px;
+  font-size: 12px;
+  color: #ffffff28;
+  font-family: 'Syne', sans-serif;
+  border-top: 1px solid #ffffff08;
+  letter-spacing: 0.3px;
+}
+
+.app-footer-name   { color: #c8f50070; font-weight: 700; }
+.app-footer-claude { color: #a78bfa70; font-weight: 700; }
+
 /* ── Mobile ── */
 @media (max-width: 768px) {
   .app-sidebar { display: none; }
@@ -255,7 +269,11 @@
   }
 
   .app-main {
-    padding: 14px 14px 90px;
+    padding: 14px 14px 16px;
+  }
+
+  .app-footer {
+    padding-bottom: 90px;
   }
 
   .toast {

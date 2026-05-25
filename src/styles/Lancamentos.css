@@ -5,10 +5,6 @@
   grid-template-columns: 1fr 1fr;
 }
 
-.lancamentos-grid > .card:last-child {
-  grid-column: 1 / -1;
-}
-
 /* Impede que grid items expandam a track além de 1fr */
 .lancamentos-grid > .card {
   min-width: 0;
@@ -153,6 +149,63 @@
   color: #ff4757;
   font-weight: 700;
   flex-shrink: 0;
+}
+
+/* ── Edit button ── */
+.edit-btn {
+  background: transparent;
+  border: 1px solid #ffffff18;
+  border-radius: 6px;
+  color: #8888aa;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.edit-btn:hover { color: #c8f500; border-color: #c8f50050; }
+
+/* ── Budget section ── */
+.budget-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.budget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.budget-item {
+  background: #1a1a26;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.budget-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.budget-item-label { font-size: 13px; font-weight: 600; }
+
+.budget-limit-input {
+  width: 100px;
+  font-size: 13px;
+  padding: 4px 8px;
+}
+
+.budget-item-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  margin-top: 4px;
 }
 
 /* ── Responsive ── */

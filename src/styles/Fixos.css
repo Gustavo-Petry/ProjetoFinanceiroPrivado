@@ -59,6 +59,32 @@
   flex-shrink: 0;
 }
 
+/* ── Paid state ── */
+.fixed-item--paid { opacity: 0.75; }
+
+.paid-btn {
+  background: transparent;
+  border: 2px solid #ffffff20;
+  border-radius: 50%;
+  color: #8888aa;
+  cursor: pointer;
+  font-size: 13px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.paid-btn:hover { border-color: #c8f500; color: #c8f500; }
+
+.paid-btn--paid {
+  background: #c8f50020;
+  border-color: #c8f500;
+  color: #c8f500;
+}
+
 /* ── Breakdown by category ── */
 .fixos-breakdown {
   border-top: 1px solid #ffffff08;

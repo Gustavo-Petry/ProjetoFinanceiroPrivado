@@ -111,6 +111,76 @@
 }
 .cof-color-btn:hover { transform: scale(1.2); }
 
+/* ── Goal badge ── */
+.cof-goal-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #a78bfa;
+  background: #a78bfa18;
+  border: 1px solid #a78bfa30;
+  border-radius: 20px;
+  padding: 1px 8px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* ── Target progress ── */
+.cof-target-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #8888aa;
+  margin-top: 4px;
+}
+
+/* ── Goal fields in form ── */
+.cof-goal-fields {
+  background: #a78bfa08;
+  border: 1px solid #a78bfa20;
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 10px;
+  display: grid;
+  gap: 12px;
+}
+
+/* ── Monthly suggestion box ── */
+.cof-suggestion-box {
+  background: #1a1a26;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.cof-suggestion-title {
+  font-size: 11px;
+  color: #8888aa;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  margin-bottom: 10px;
+}
+
+.cof-suggestion-row {
+  display: flex;
+  gap: 20px;
+}
+
+.cof-suggestion-label {
+  font-size: 10px;
+  color: #8888aa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+
+.cof-suggestion-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 14px;
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .cofrinhos-summary    { grid-template-columns: 1fr 1fr; }

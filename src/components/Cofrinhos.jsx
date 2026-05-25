@@ -20,11 +20,21 @@ function getLast6Months() {
   })
 }
 
+function monthsFromNow(toIso) {
+  if (!toIso) return 0
+  const now = new Date()
+  const to  = new Date(toIso + 'T12:00:00')
+  return (to.getFullYear() - now.getFullYear()) * 12 + (to.getMonth() - now.getMonth())
+}
+
 const months       = getLast6Months()
 const currentMonth = months[5].key
 
 export default function Cofrinhos({ data, updateData, showToast }) {
-  const [form,        setForm]        = useState({ name: '', icon: '🐷', color: '#00f5c8', initialValue: '' })
+  const [form, setForm] = useState({
+    name: '', icon: '🐷', color: '#00f5c8', initialValue: '',
+    targetValue: '', isGoal: false, targetDate: '', priority: 'primary',
+  })
   const [depositForm, setDepositForm] = useState({})
   const [expanded,    setExpanded]    = useState(null)
 
@@ -42,16 +52,32 @@ export default function Cofrinhos({ data, updateData, showToast }) {
     0), [cofrinhos]
   )
 
+  // Monthly suggestion preview in the creation form
+  const formSuggestion = useMemo(() => {
+    if (!form.isGoal || !form.targetDate || !form.targetValue) return null
+    const target    = parseFloat(form.targetValue) || 0
+    const saved     = parseFloat(form.initialValue) || 0
+    const remaining = Math.max(target - saved, 0)
+    const months    = Math.max(monthsFromNow(form.targetDate), 0)
+    if (months <= 0 || remaining <= 0) return null
+    return { monthly: remaining / months, months, remaining }
+  }, [form.isGoal, form.targetDate, form.targetValue, form.initialValue])
+
   const addCofrinho = () => {
     if (!form.name.trim()) { showToast('Preencha o nome'); return }
+    if (form.isGoal && !form.targetDate) { showToast('Defina a data alvo para o objetivo'); return }
     updateData({
       cofrinhos: [...cofrinhos, {
         id: Date.now(), name: form.name, icon: form.icon, color: form.color,
         initialValue: parseFloat(form.initialValue) || 0,
+        targetValue:  parseFloat(form.targetValue)  || 0,
+        isGoal:       form.isGoal,
+        targetDate:   form.isGoal ? form.targetDate : '',
+        priority:     form.isGoal ? form.priority   : 'primary',
         deposits: [],
       }],
     })
-    setForm({ name: '', icon: '🐷', color: '#00f5c8', initialValue: '' })
+    setForm({ name: '', icon: '🐷', color: '#00f5c8', initialValue: '', targetValue: '', isGoal: false, targetDate: '', priority: 'primary' })
     showToast('Cofrinho criado!')
   }
 
@@ -83,6 +109,8 @@ export default function Cofrinhos({ data, updateData, showToast }) {
       ),
     })
 
+  const today = new Date().toISOString().split('T')[0]
+
   return (
     <div className="cofrinhos-grid">
 
@@ -106,8 +134,10 @@ export default function Cofrinhos({ data, updateData, showToast }) {
 
       {/* ── Lista de cofrinhos ── */}
       {cofrinhos.map(c => {
-        const total  = (c.initialValue || 0) + c.deposits.reduce((s, d) => s + d.amount, 0)
-        const mesDep = c.deposits.filter(d => d.month === currentMonth).reduce((s, d) => s + d.amount, 0)
+        const total    = (c.initialValue || 0) + c.deposits.reduce((s, d) => s + d.amount, 0)
+        const mesDep   = c.deposits.filter(d => d.month === currentMonth).reduce((s, d) => s + d.amount, 0)
+        const target   = parseFloat(c.targetValue) || 0
+        const pct      = target > 0 ? Math.min((total / target) * 100, 100) : null
         const chartData = months.map(m => ({
           name:     m.label,
           Guardado: c.deposits.filter(d => d.month === m.key).reduce((s, d) => s + d.amount, 0),
@@ -123,10 +153,18 @@ export default function Cofrinhos({ data, updateData, showToast }) {
                   {c.icon}
                 </div>
                 <div>
-                  <div className="cof-name">{c.name}</div>
+                  <div className="cof-name">
+                    {c.name}
+                    {c.isGoal && <span className="cof-goal-badge">🎯 Objetivo</span>}
+                  </div>
                   <div className="cof-meta">
                     Total:&nbsp;
                     <span style={{ color: c.color, fontFamily: 'JetBrains Mono', fontWeight: 700 }}>{fmt(total)}</span>
+                    {target > 0 && (
+                      <>&nbsp;·&nbsp;
+                        <span style={{ color: '#8888aa' }}>{pct != null ? `${pct.toFixed(0)}% da meta` : ''}</span>
+                      </>
+                    )}
                     {mesDep > 0 && (
                       <>&nbsp;·&nbsp;Este mês:&nbsp;
                         <span style={{ color: '#c8f500', fontFamily: 'JetBrains Mono', fontWeight: 700 }}>{fmt(mesDep)}</span>
@@ -140,6 +178,23 @@ export default function Cofrinhos({ data, updateData, showToast }) {
                 <span style={{ color: '#8888aa', fontSize: 11 }}>{isExpanded ? '▲' : '▼'}</span>
               </div>
             </div>
+
+            {/* Progress bar (when target set) */}
+            {target > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <div className="progress-bar">
+                  <div style={{
+                    background: pct >= 100 ? '#c8f500' : c.color,
+                    height: '100%', borderRadius: 10,
+                    width: `${pct}%`, transition: 'width 0.5s',
+                  }} />
+                </div>
+                <div className="cof-target-meta">
+                  <span>{fmt(total)} de {fmt(target)}</span>
+                  <span style={{ color: pct >= 100 ? '#c8f500' : c.color }}>{pct != null ? `${pct.toFixed(0)}%` : ''}</span>
+                </div>
+              </div>
+            )}
 
             {isExpanded && (
               <div className="cof-body">
@@ -273,6 +328,85 @@ export default function Cofrinhos({ data, updateData, showToast }) {
           <div style={{ color: '#8888aa', fontSize: 11, marginTop: 4 }}>
             Este valor não é descontado do salário — apenas registra o que você já tinha.
           </div>
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label className="form-label">Meta de valor (R$) — opcional</label>
+          <input
+            type="number"
+            placeholder="0,00"
+            value={form.targetValue}
+            onChange={e => setForm(p => ({ ...p, targetValue: e.target.value }))}
+            style={{ fontFamily: 'JetBrains Mono', color: '#ffa502' }}
+          />
+          <div style={{ color: '#8888aa', fontSize: 11, marginTop: 4 }}>
+            Quando definida, mostra barra de progresso no cofrinho.
+          </div>
+        </div>
+
+        {/* É um objetivo? */}
+        <div style={{ marginBottom: 14 }}>
+          <div
+            className="benefit-label"
+            onClick={() => setForm(p => ({ ...p, isGoal: !p.isGoal }))}
+            style={{ marginBottom: form.isGoal ? 12 : 0 }}
+          >
+            <div
+              className={`custom-checkbox${form.isGoal ? ' custom-checkbox--checked' : ''}`}
+              style={form.isGoal ? { background: '#a78bfa', borderColor: '#a78bfa' } : {}}
+            >
+              {form.isGoal && '✓'}
+            </div>
+            <span style={{ color: form.isGoal ? '#a78bfa' : '#8888aa', fontWeight: form.isGoal ? 700 : 400 }}>
+              🎯 É um objetivo? (aparece na aba Objetivos)
+            </span>
+          </div>
+
+          {form.isGoal && (
+            <div className="cof-goal-fields">
+              <div style={{ marginBottom: 12 }}>
+                <label className="form-label">Prioridade</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    className={`pill ${form.priority === 'primary' ? 'active' : ''}`}
+                    onClick={() => setForm(p => ({ ...p, priority: 'primary' }))}
+                  >🥇 Principal</button>
+                  <button
+                    className={`pill ${form.priority === 'secondary' ? 'active' : ''}`}
+                    onClick={() => setForm(p => ({ ...p, priority: 'secondary' }))}
+                  >🥈 Secundário</button>
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Quero alcançar até (obrigatório)</label>
+                <input
+                  type="date" value={form.targetDate} min={today}
+                  onChange={e => setForm(p => ({ ...p, targetDate: e.target.value }))}
+                />
+              </div>
+
+              {formSuggestion && (
+                <div className="cof-suggestion-box">
+                  <div className="cof-suggestion-title">Sugestão mensal para atingir a meta</div>
+                  <div className="cof-suggestion-row">
+                    <div>
+                      <div className="cof-suggestion-label">Por mês</div>
+                      <div className="cof-suggestion-value" style={{ color: '#c8f500' }}>{fmt(formSuggestion.monthly)}</div>
+                    </div>
+                    <div>
+                      <div className="cof-suggestion-label">Meses</div>
+                      <div className="cof-suggestion-value" style={{ color: '#00f5c8' }}>{formSuggestion.months}</div>
+                    </div>
+                    <div>
+                      <div className="cof-suggestion-label">Faltam</div>
+                      <div className="cof-suggestion-value" style={{ color: '#ffa502' }}>{fmt(formSuggestion.remaining)}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <button className="btn btn-green btn-full" onClick={addCofrinho}>+ Criar Cofrinho</button>

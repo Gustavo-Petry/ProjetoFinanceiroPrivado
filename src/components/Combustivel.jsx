@@ -57,41 +57,78 @@ export default function Combustivel({ data, updateData, showToast }) {
 
   const addExpense = () => {
     if (!form.amount) { showToast('Preencha o valor'); return }
-    const amount     = parseFloat(form.amount) || 0
-    const newExpense = {
-      id:          Date.now(),
-      amount,
-      date:        form.date,
-      description: form.description.trim() || 'Combustível',
-    }
-    const newExpenses = [...expenses, newExpense]
+    const amount = parseFloat(form.amount) || 0
+    const desc   = form.description.trim() || 'Combustível'
+    const now    = Date.now()
 
-    // Detecta cruzamento do limite do VT neste mês
-    if (form.date.startsWith(currentMonthKey) && vtValue > 0) {
-      const prevTotal = expenses
+    const newExpense = { id: now, amount, date: form.date, description: desc }
+    const newFuelExpenses = [...expenses, newExpense]
+    const newTransactions = [...data.transactions]
+
+    // Calcula quanto do VT ainda resta neste mês (baseado nos lançamentos existentes)
+    const isCurrentMonth = form.date.startsWith(currentMonthKey)
+    if (isCurrentMonth && vtValue > 0) {
+      const prevFuelTotal = expenses
         .filter(e => e.date?.startsWith(currentMonthKey))
         .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
-      const newTotal  = prevTotal + amount
-      const wasOver   = prevTotal > vtValue
-      const nowOver   = newTotal  > vtValue
 
-      if (!wasOver && nowOver) {
-        showToast(`VT esgotado! ${fmt(newTotal - vtValue)} sairá do seu salário`)
-      } else if (nowOver) {
-        showToast(`Adicionado — ${fmt(newTotal - vtValue)} no total do salário este mês`)
+      const vtRemainingBefore = Math.max(vtValue - prevFuelTotal, 0)
+      const vtPortion         = Math.min(amount, vtRemainingBefore)
+      const salaryPortion     = amount - vtPortion
+
+      if (vtPortion > 0) {
+        newTransactions.push({
+          id:          now + 1,
+          fuelId:      now,
+          description: salaryPortion > 0 ? `${desc} (VT)` : desc,
+          value:       vtPortion,
+          category:    'Transporte',
+          date:        form.date,
+          paidFrom:    'vt',
+        })
+      }
+      if (salaryPortion > 0) {
+        newTransactions.push({
+          id:          now + 2,
+          fuelId:      now,
+          description: `${desc} (excede VT)`,
+          value:       salaryPortion,
+          category:    'Transporte',
+          date:        form.date,
+          paidFrom:    'salary',
+        })
+      }
+
+      if (vtRemainingBefore === 0) {
+        showToast(`${fmt(amount)} saindo do salário — VT já esgotado`)
+      } else if (salaryPortion > 0) {
+        showToast(`VT cobriu ${fmt(vtPortion)} · ${fmt(salaryPortion)} debitado do salário`)
       } else {
-        showToast(`Adicionado! VT restante: ${fmt(vtValue - newTotal)}`)
+        showToast(`Adicionado! VT restante: ${fmt(vtRemainingBefore - vtPortion)}`)
       }
     } else {
+      // Fora do mês atual ou sem VT → lança direto no salário
+      newTransactions.push({
+        id:          now + 1,
+        fuelId:      now,
+        description: desc,
+        value:       amount,
+        category:    'Transporte',
+        date:        form.date,
+        paidFrom:    'salary',
+      })
       showToast('Gasto registrado!')
     }
 
-    updateData({ fuelExpenses: newExpenses })
+    updateData({ fuelExpenses: newFuelExpenses, transactions: newTransactions })
     setForm({ amount: '', date: todayISO(), description: '' })
   }
 
   const removeExpense = (id) =>
-    updateData({ fuelExpenses: expenses.filter(e => e.id !== id) })
+    updateData({
+      fuelExpenses: expenses.filter(e => e.id !== id),
+      transactions: data.transactions.filter(t => t.fuelId !== id),
+    })
 
   return (
     <div className="combustivel-grid">

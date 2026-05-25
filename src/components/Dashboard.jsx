@@ -26,11 +26,19 @@ const tooltipStyle = {
   labelStyle: { color: '#8888aa' },
 }
 
-function KPICard({ title, value, color, sub, badge }) {
+function KPICard({ title, value, color, sub, badge, trend }) {
   return (
     <div className="card" style={{ borderColor: color + '30' }}>
       <div className="kpi-title">{title}</div>
       <div className="kpi-value" style={{ color }}>{value}</div>
+      {trend != null && (
+        <span className="kpi-badge" style={{
+          background: (trend >= 0 ? '#ff475718' : '#c8f50018'),
+          color: trend >= 0 ? '#ff4757' : '#c8f500',
+        }}>
+          {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}% vs mês ant.
+        </span>
+      )}
       {badge && (
         <span className="kpi-badge" style={{ background: color + '18', color }}>{badge}</span>
       )}
@@ -42,6 +50,8 @@ function KPICard({ title, value, color, sub, badge }) {
 export default function Dashboard({ data }) {
   const now = new Date()
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
 
   const totalRenda = useMemo(() => {
     const sal = parseFloat(data.salary) || 0
@@ -56,9 +66,19 @@ export default function Dashboard({ data }) {
     [data.transactions, currentMonth]
   )
 
+  const prevTx = useMemo(() =>
+    data.transactions.filter(t => t.date?.startsWith(prevMonth)),
+    [data.transactions, prevMonth]
+  )
+
   const gastosVariaveis = useMemo(() =>
     monthTx.reduce((s, t) => s + (parseFloat(t.value) || 0), 0),
     [monthTx]
+  )
+
+  const prevGastosVariaveis = useMemo(() =>
+    prevTx.reduce((s, t) => s + (parseFloat(t.value) || 0), 0),
+    [prevTx]
   )
 
   const gastosFixos = useMemo(() =>
@@ -73,8 +93,13 @@ export default function Dashboard({ data }) {
   )
 
   const gastosMes   = gastosVariaveis + gastosFixos
+  const prevGastos  = prevGastosVariaveis + gastosFixos
   const saldoLivre  = totalRenda - gastosMes - depositosCofrinhos
   const pctGuardado = totalRenda > 0 ? ((saldoLivre / totalRenda) * 100).toFixed(0) : 0
+
+  const gastosTrend = prevGastos > 0
+    ? parseInt(((gastosMes - prevGastos) / prevGastos * 100).toFixed(0))
+    : null
 
   const totalGuardando = useMemo(() =>
     (data.goals || []).reduce((s, g) => s + (parseFloat(g.monthlySavings) || 0), 0),
@@ -87,13 +112,13 @@ export default function Dashboard({ data }) {
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const label = d.toLocaleDateString('pt-BR', { month: 'short' })
       const cofMes = (data.cofrinhos || []).reduce((s, c) =>
-        s + c.deposits.filter(d => d.month === key).reduce((ss, d) => ss + d.amount, 0), 0)
+        s + c.deposits.filter(d2 => d2.month === key).reduce((ss, d2) => ss + d2.amount, 0), 0)
       const gastos = data.transactions
         .filter(t => t.date?.startsWith(key))
         .reduce((s, t) => s + (parseFloat(t.value) || 0), 0) + gastosFixos + cofMes
       return { name: label, Renda: totalRenda, Gastos: gastos }
     }),
-    [data.transactions, totalRenda, gastosFixos]
+    [data.transactions, totalRenda, gastosFixos, data.cofrinhos]
   )
 
   const pieData = useMemo(() => {
@@ -118,12 +143,48 @@ export default function Dashboard({ data }) {
 
   const enabledBenefits = Object.entries(data.benefits).filter(([, b]) => b.enabled && b.value)
 
+  // Dynamic income: each source minus transactions allocated to it this month
+  const incomeSources = useMemo(() => {
+    const sources = []
+    if (data.salary) {
+      const used = monthTx
+        .filter(t => t.paidFrom === 'salary')
+        .reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
+      const total = parseFloat(data.salary) || 0
+      sources.push({ key: 'salary', label: 'Salário', icon: '💵', color: '#c8f500', total, used, remaining: total - used })
+    }
+    Object.entries(data.benefits).forEach(([key, b]) => {
+      if (!b.enabled || !b.value) return
+      const used = monthTx
+        .filter(t => t.paidFrom === key)
+        .reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
+      const total = parseFloat(b.value) || 0
+      sources.push({ key, label: b.label, icon: b.icon, color: b.color, total, used, remaining: total - used })
+    })
+    return sources
+  }, [data.salary, data.benefits, monthTx])
+
+  const budgets = data.budgets || {}
+  const hasBudgets = Object.values(budgets).some(v => parseFloat(v) > 0)
+  const monthSpendByCategory = useMemo(() => {
+    const cats = {}
+    monthTx.forEach(t => {
+      cats[t.category] = (cats[t.category] || 0) + (parseFloat(t.value) || 0)
+    })
+    return cats
+  }, [monthTx])
+
   return (
     <div className="dashboard-grid">
       {/* KPIs */}
       <div className="kpis-row">
         <KPICard title="Renda Total"   value={fmt(totalRenda)}  color="#c8f500" />
-        <KPICard title="Gastos do Mês" value={fmt(gastosMes)}   color="#ff4757" />
+        <KPICard
+          title="Gastos do Mês"
+          value={fmt(gastosMes)}
+          color="#ff4757"
+          trend={gastosTrend}
+        />
         <KPICard
           title="Saldo Livre"
           value={fmt(saldoLivre)}
@@ -138,34 +199,37 @@ export default function Dashboard({ data }) {
         />
       </div>
 
-      {/* Composição da renda */}
-      {(data.salary || enabledBenefits.length > 0) && (
+      {/* Renda por fonte — dinâmica */}
+      {incomeSources.length > 0 && (
         <div className="card">
-          <div className="section-title">Composição da Renda</div>
-          <div className="income-row">
-            {data.salary && (
-              <div
-                className="income-item"
-                style={{ background: '#c8f50010', border: '1px solid #c8f50025' }}
-              >
-                <div className="income-item-label">Salário</div>
-                <div className="income-item-value" style={{ color: '#c8f500' }}>
-                  {fmt(parseFloat(data.salary))}
+          <div className="section-title">Renda por Fonte — disponível este mês</div>
+          <div className="income-sources-grid">
+            {incomeSources.map(src => {
+              const pct  = src.total > 0 ? Math.min((src.used / src.total) * 100, 100) : 0
+              const over = src.used > src.total
+              return (
+                <div key={src.key} className="income-source-card" style={{ borderColor: src.color + '30' }}>
+                  <div className="income-source-header">
+                    <span className="income-source-icon">{src.icon}</span>
+                    <span className="income-source-label">{src.label}</span>
+                  </div>
+                  <div className="income-source-remaining" style={{ color: over ? '#ff4757' : src.color }}>
+                    {fmt(src.remaining)}
+                  </div>
+                  <div className="income-source-total">de {fmt(src.total)}</div>
+                  <div className="progress-bar" style={{ marginTop: 8 }}>
+                    <div style={{
+                      background: over ? '#ff4757' : src.color,
+                      height: '100%', borderRadius: 10,
+                      width: `${pct}%`, transition: 'width 0.5s',
+                    }} />
+                  </div>
+                  <div className="income-source-meta">
+                    {fmt(src.used)} usado · {pct.toFixed(0)}%
+                  </div>
                 </div>
-              </div>
-            )}
-            {enabledBenefits.map(([key, b]) => (
-              <div
-                key={key}
-                className="income-item"
-                style={{ background: b.color + '10', border: `1px solid ${b.color}25` }}
-              >
-                <div className="income-item-label">{b.icon} {b.label}</div>
-                <div className="income-item-value" style={{ color: b.color }}>
-                  {fmt(parseFloat(b.value))}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
@@ -217,14 +281,54 @@ export default function Dashboard({ data }) {
         </div>
       </div>
 
+      {/* Orçamento por Categoria */}
+      {hasBudgets && (
+        <div className="card">
+          <div className="section-title">Orçamento por Categoria — este mês</div>
+          <div className="budget-bars-grid">
+            {Object.entries(CATEGORY_COLORS).map(([cat, color]) => {
+              const budget = parseFloat(budgets[cat]) || 0
+              if (!budget) return null
+              const spent = monthSpendByCategory[cat] || 0
+              const pct   = Math.min((spent / budget) * 100, 100)
+              const over  = spent > budget
+              return (
+                <div key={cat} className="budget-bar-item">
+                  <div className="budget-bar-header">
+                    <span className="budget-bar-label">{cat}</span>
+                    <span className="budget-bar-value" style={{ color: over ? '#ff4757' : color }}>
+                      {fmt(spent)} / {fmt(budget)}
+                    </span>
+                  </div>
+                  <div className="progress-bar">
+                    <div style={{
+                      background: over ? '#ff4757' : color,
+                      height: '100%', borderRadius: 10,
+                      width: `${pct}%`, transition: 'width 0.5s',
+                    }} />
+                  </div>
+                  {over && (
+                    <div style={{ color: '#ff4757', fontSize: 11, marginTop: 3, fontWeight: 600 }}>
+                      Ultrapassado em {fmt(spent - budget)}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Objetivos resumo */}
-      {(data.goals || []).length > 0 && (
+      {(data.cofrinhos || []).filter(c => c.isGoal).length > 0 && (
         <div className="card card-accent">
           <div className="section-title">🎯 Objetivos</div>
           <div className="caixinhas-preview-row">
-            {(data.goals || []).map(g => {
-              const pct = g.targetValue > 0 ? Math.min((g.currentSaved / g.targetValue) * 100, 100) : 0
-              const color = g.priority === 'primary' ? '#c8f500' : '#00f5c8'
+            {(data.cofrinhos || []).filter(c => c.isGoal).map(g => {
+              const saved  = (g.initialValue || 0) + g.deposits.reduce((s, d) => s + d.amount, 0)
+              const target = parseFloat(g.targetValue) || 0
+              const pct    = target > 0 ? Math.min((saved / target) * 100, 100) : 0
+              const color  = g.priority === 'primary' ? '#c8f500' : '#00f5c8'
               return (
                 <div key={g.id} className="caixinha-mini">
                   <div className="caixinha-mini-icon">{g.icon}</div>
@@ -243,12 +347,17 @@ export default function Dashboard({ data }) {
           <div className="section-title">🐷 Cofrinhos</div>
           <div className="caixinhas-preview-row">
             {(data.cofrinhos || []).map(c => {
-              const total = c.deposits.reduce((s, d) => s + d.amount, 0)
+              const total = (c.initialValue || 0) + c.deposits.reduce((s, d) => s + d.amount, 0)
+              const hasTarget = parseFloat(c.targetValue) > 0
+              const pct = hasTarget ? Math.min((total / parseFloat(c.targetValue)) * 100, 100) : null
               return (
                 <div key={c.id} className="caixinha-mini" style={{ borderLeft: `3px solid ${c.color}` }}>
                   <div className="caixinha-mini-icon">{c.icon}</div>
                   <div className="caixinha-mini-name">{c.name}</div>
                   <div className="caixinha-mini-value" style={{ color: c.color }}>{fmt(total)}</div>
+                  {pct != null && (
+                    <div style={{ fontSize: 11, color: '#8888aa', marginTop: 2 }}>{pct.toFixed(0)}% da meta</div>
+                  )}
                 </div>
               )
             })}

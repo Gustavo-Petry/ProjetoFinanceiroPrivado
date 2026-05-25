@@ -198,6 +198,28 @@
   .obj-bar-legend { flex-wrap: wrap; gap: 8px; }
 }
 
+/* ── Deposit row ── */
+.obj-deposit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+/* ── Edit row ── */
+.obj-edit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 10px;
+}
+
+@media (max-width: 640px) {
+  .obj-deposit-row { grid-template-columns: 1fr; }
+  .obj-edit-row    { grid-template-columns: 1fr; }
+}
+
 /* ── Alerta de sobra negativa ── */
 .obj-alert {
   background: #ff475715;

@@ -13,6 +13,9 @@ const CATEGORIES = [
 
 const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 
+const _now = new Date()
+const currentMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`
+
 export default function Fixos({ data, updateData, showToast }) {
   const [form, setForm] = useState({ name: '', value: '', category: 'Moradia', dueDay: '5' })
 
@@ -21,12 +24,22 @@ export default function Fixos({ data, updateData, showToast }) {
     [data.fixedExpenses]
   )
 
+  const paidCount = useMemo(() =>
+    data.fixedExpenses.filter(f => (f.paidMonths || []).includes(currentMonth)).length,
+    [data.fixedExpenses]
+  )
+
   const addFixed = () => {
     if (!form.name.trim() || !form.value) { showToast('Preencha nome e valor'); return }
     updateData({
       fixedExpenses: [
         ...data.fixedExpenses,
-        { id: Date.now(), ...form, value: parseFloat(form.value), dueDay: parseInt(form.dueDay) || 1 },
+        {
+          id: Date.now(), ...form,
+          value: parseFloat(form.value),
+          dueDay: parseInt(form.dueDay) || 1,
+          paidMonths: [],
+        },
       ],
     })
     setForm({ name: '', value: '', category: 'Moradia', dueDay: '5' })
@@ -35,6 +48,22 @@ export default function Fixos({ data, updateData, showToast }) {
 
   const removeFixed = (id) =>
     updateData({ fixedExpenses: data.fixedExpenses.filter(f => f.id !== id) })
+
+  const togglePaid = (id) => {
+    updateData({
+      fixedExpenses: data.fixedExpenses.map(f => {
+        if (f.id !== id) return f
+        const paid = f.paidMonths || []
+        const isPaid = paid.includes(currentMonth)
+        return {
+          ...f,
+          paidMonths: isPaid
+            ? paid.filter(m => m !== currentMonth)
+            : [...paid, currentMonth],
+        }
+      }),
+    })
+  }
 
   return (
     <div className="fixos-grid">
@@ -81,8 +110,15 @@ export default function Fixos({ data, updateData, showToast }) {
       <div className="card">
         <div className="fixos-list-header">
           <h3 className="fixos-list-title">Gastos Fixos Mensais</h3>
-          <div className="fixos-total">
-            {fmt(totalFixed)}<span className="fixos-total-unit">/mês</span>
+          <div style={{ textAlign: 'right' }}>
+            <div className="fixos-total">
+              {fmt(totalFixed)}<span className="fixos-total-unit">/mês</span>
+            </div>
+            {data.fixedExpenses.length > 0 && (
+              <div style={{ fontSize: 11, color: '#8888aa', marginTop: 2 }}>
+                {paidCount}/{data.fixedExpenses.length} pagos este mês
+              </div>
+            )}
           </div>
         </div>
 
@@ -91,9 +127,10 @@ export default function Fixos({ data, updateData, showToast }) {
             <div className="empty-state">Nenhum gasto fixo cadastrado</div>
           )}
           {data.fixedExpenses.map(f => {
-            const cat = CATEGORIES.find(c => c.id === f.category) || CATEGORIES.at(-1)
+            const cat   = CATEGORIES.find(c => c.id === f.category) || CATEGORIES.at(-1)
+            const isPaid = (f.paidMonths || []).includes(currentMonth)
             return (
-              <div key={f.id} className="fixed-item">
+              <div key={f.id} className={`fixed-item${isPaid ? ' fixed-item--paid' : ''}`}>
                 <div
                   className="fixed-item-icon"
                   style={{ background: cat.color + '18', border: `1px solid ${cat.color}30` }}
@@ -101,10 +138,19 @@ export default function Fixos({ data, updateData, showToast }) {
                   {cat.icon}
                 </div>
                 <div className="fixed-item-info">
-                  <div className="fixed-item-name">{f.name}</div>
+                  <div className="fixed-item-name" style={{ textDecoration: isPaid ? 'line-through' : 'none', opacity: isPaid ? 0.5 : 1 }}>
+                    {f.name}
+                  </div>
                   <div className="fixed-item-meta">Vence dia {f.dueDay} · {f.category}</div>
                 </div>
-                <span className="fixed-item-value">{fmt(f.value)}</span>
+                <span className="fixed-item-value" style={{ opacity: isPaid ? 0.4 : 1 }}>{fmt(f.value)}</span>
+                <button
+                  className={`paid-btn${isPaid ? ' paid-btn--paid' : ''}`}
+                  onClick={() => togglePaid(f.id)}
+                  title={isPaid ? 'Marcar como não pago' : 'Marcar como pago'}
+                >
+                  {isPaid ? '✓' : '○'}
+                </button>
                 <button className="remove-btn" onClick={() => removeFixed(f.id)}>✕</button>
               </div>
             )
