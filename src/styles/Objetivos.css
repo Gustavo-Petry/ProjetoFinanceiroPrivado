@@ -72,7 +72,10 @@
   margin-top: 4px;
 }
 
-.obj-goal-card { cursor: default; }
+.obj-goal-card {
+  cursor: default;
+  min-width: 0;  /* impede o card de expandir além da coluna do grid */
+}
 .obj-goal-primary   { border-color: #c8f50035 !important; }
 .obj-goal-secondary { border-color: #00f5c835 !important; }
 
@@ -196,30 +199,32 @@
 /* Tablet/mobile — cabeçalho do card empilha verticalmente */
 @media (max-width: 640px) {
   .obj-goal-header {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
-    gap: 10px 8px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
   }
 
+  /* ícone + nome ocupa toda a primeira linha */
   .obj-goal-left {
-    grid-column: 1;
-    grid-row: 1;
+    flex: 1;
+    min-width: 0;
+    order: 1;
   }
 
-  /* botão ✕ fica no canto superior direito */
+  /* ✕ fica no canto da primeira linha */
   .obj-goal-header > .remove-btn {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: start;
+    order: 2;
+    align-self: flex-start;
+    flex-shrink: 0;
   }
 
-  /* valor/mês vai para linha abaixo, alinhado à esquerda */
+  /* valor/mês desce para segunda linha, alinhado à esquerda */
   .obj-goal-right {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    order: 3;
+    width: 100%;
     text-align: left;
     padding-left: 44px;
+    flex-shrink: 0;
   }
 }
 
@@ -314,6 +319,9 @@
   padding: 4px 0 8px;
   scrollbar-width: thin;
   scrollbar-color: #ffffff15 transparent;
+  /* garante que o flex não expande além do card */
+  max-width: 100%;
+  min-width: 0;
 }
 
 .obj-month-dot {
