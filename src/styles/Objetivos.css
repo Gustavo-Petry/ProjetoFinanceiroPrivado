@@ -192,10 +192,50 @@
 @media (max-width: 900px) {
   .obj-summary-row { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* Tablet/mobile — cabeçalho do card empilha verticalmente */
+@media (max-width: 640px) {
+  .obj-goal-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 10px 8px;
+  }
+
+  .obj-goal-left {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  /* botão ✕ fica no canto superior direito */
+  .obj-goal-header > .remove-btn {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+
+  /* valor/mês vai para linha abaixo, alinhado à esquerda */
+  .obj-goal-right {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    text-align: left;
+    padding-left: 44px;
+  }
+}
+
 @media (max-width: 480px) {
-  .obj-summary-row { grid-template-columns: repeat(2, 1fr); }
-  .obj-goal-monthly { font-size: 17px; }
-  .obj-bar-legend { flex-wrap: wrap; gap: 8px; }
+  .obj-summary-row      { grid-template-columns: repeat(2, 1fr); }
+  .obj-summary-card     { padding: 10px 11px; }
+  .obj-summary-value    { font-size: 13px; }
+  .obj-goal-monthly     { font-size: 16px; }
+  .obj-goal-name        { font-size: 14px; }
+  .obj-goal-meta        { font-size: 11px; }
+  .obj-goal-icon        { font-size: 26px; }
+  .obj-bar-legend       { flex-wrap: wrap; gap: 8px; }
+  .obj-sources-grid     { grid-template-columns: repeat(2, 1fr); }
+  .obj-month-dot        { min-width: 48px; height: 50px; }
+  .obj-month-dot-label  { font-size: 8px; }
+  .obj-source-remaining { font-size: 15px; }
 }
 
 /* ── Deposit row ── */
