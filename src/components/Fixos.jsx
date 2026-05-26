@@ -15,9 +15,19 @@ const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency:
 
 const _now = new Date()
 const currentMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`
+const todayISO = () => new Date().toISOString().split('T')[0]
 
 export default function Fixos({ data, updateData, showToast }) {
-  const [form, setForm] = useState({ name: '', value: '', category: 'Moradia', dueDay: '5' })
+  const [form, setForm] = useState({ name: '', value: '', category: 'Moradia', dueDay: '5', paidFrom: 'salary' })
+
+  const incomeSources = useMemo(() => {
+    const sources = []
+    if (data.salary) sources.push({ key: 'salary', label: '💵 Salário' })
+    Object.entries(data.benefits).forEach(([key, b]) => {
+      if (b.enabled && b.value) sources.push({ key, label: `${b.icon} ${b.label}` })
+    })
+    return sources
+  }, [data.salary, data.benefits])
 
   const totalFixed = useMemo(() =>
     data.fixedExpenses.reduce((s, f) => s + (parseFloat(f.value) || 0), 0),
@@ -42,27 +52,59 @@ export default function Fixos({ data, updateData, showToast }) {
         },
       ],
     })
-    setForm({ name: '', value: '', category: 'Moradia', dueDay: '5' })
+    setForm({ name: '', value: '', category: 'Moradia', dueDay: '5', paidFrom: form.paidFrom })
     showToast('Gasto fixo adicionado!')
   }
 
   const removeFixed = (id) =>
-    updateData({ fixedExpenses: data.fixedExpenses.filter(f => f.id !== id) })
+    updateData({
+      fixedExpenses: data.fixedExpenses.filter(f => f.id !== id),
+      transactions:  data.transactions.filter(t => t.fixedId !== id),
+    })
 
   const togglePaid = (id) => {
-    updateData({
-      fixedExpenses: data.fixedExpenses.map(f => {
-        if (f.id !== id) return f
-        const paid = f.paidMonths || []
-        const isPaid = paid.includes(currentMonth)
-        return {
-          ...f,
-          paidMonths: isPaid
-            ? paid.filter(m => m !== currentMonth)
-            : [...paid, currentMonth],
-        }
-      }),
-    })
+    const f = data.fixedExpenses.find(exp => exp.id === id)
+    if (!f) return
+    const paid    = f.paidMonths || []
+    const isPaid  = paid.includes(currentMonth)
+
+    if (!isPaid) {
+      // Marcar como pago → cria transação na categoria e fonte correta
+      const newTx = {
+        id:              Date.now(),
+        fixedId:         f.id,
+        isFixedExpense:  true,
+        description:     f.name,
+        value:           parseFloat(f.value) || 0,
+        category:        f.category || 'Outros',
+        date:            todayISO(),
+        paidFrom:        f.paidFrom || 'salary',
+      }
+      updateData({
+        fixedExpenses: data.fixedExpenses.map(exp =>
+          exp.id === id ? { ...exp, paidMonths: [...paid, currentMonth] } : exp
+        ),
+        transactions: [...data.transactions, newTx],
+      })
+      showToast(`${f.name} marcado como pago!`)
+    } else {
+      // Desmarcar → remove a transação vinculada
+      updateData({
+        fixedExpenses: data.fixedExpenses.map(exp =>
+          exp.id === id ? { ...exp, paidMonths: paid.filter(m => m !== currentMonth) } : exp
+        ),
+        transactions: data.transactions.filter(
+          t => !(t.fixedId === id && t.date?.startsWith(currentMonth))
+        ),
+      })
+      showToast(`${f.name} desmarcado`)
+    }
+  }
+
+  const benefitLabel = (key) => {
+    if (key === 'salary' || !key) return '💵 Salário'
+    const b = data.benefits?.[key]
+    return b ? `${b.icon} ${b.label}` : key
   }
 
   return (
@@ -102,6 +144,16 @@ export default function Fixos({ data, updateData, showToast }) {
               style={{ fontFamily: 'JetBrains Mono' }}
             />
           </div>
+          {incomeSources.length > 0 && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label className="form-label">Método de pagamento</label>
+              <select value={form.paidFrom} onChange={e => setForm(p => ({ ...p, paidFrom: e.target.value }))}>
+                {incomeSources.map(s => (
+                  <option key={s.key} value={s.key}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
         <button className="btn btn-green btn-full" onClick={addFixed}>+ Adicionar</button>
       </div>
@@ -141,7 +193,9 @@ export default function Fixos({ data, updateData, showToast }) {
                   <div className="fixed-item-name" style={{ textDecoration: isPaid ? 'line-through' : 'none', opacity: isPaid ? 0.5 : 1 }}>
                     {f.name}
                   </div>
-                  <div className="fixed-item-meta">Vence dia {f.dueDay} · {f.category}</div>
+                  <div className="fixed-item-meta">
+                    Vence dia {f.dueDay} · {f.category} · {benefitLabel(f.paidFrom)}
+                  </div>
                 </div>
                 <span className="fixed-item-value" style={{ opacity: isPaid ? 0.4 : 1 }}>{fmt(f.value)}</span>
                 <button

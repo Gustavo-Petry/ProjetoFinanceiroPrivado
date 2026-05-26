@@ -81,7 +81,16 @@ export default function Dashboard({ data }) {
     [prevTx]
   )
 
+  // Fixos NÃO pagos no mês atual (os pagos viram transações com isFixedExpense:true)
   const gastosFixos = useMemo(() =>
+    data.fixedExpenses
+      .filter(f => !(f.paidMonths || []).includes(currentMonth))
+      .reduce((s, f) => s + (parseFloat(f.value) || 0), 0),
+    [data.fixedExpenses, currentMonth]
+  )
+
+  // Total de fixos (todos) — usado como proxy em prevGastos e no gráfico
+  const gastosFixosTotal = useMemo(() =>
     data.fixedExpenses.reduce((s, f) => s + (parseFloat(f.value) || 0), 0),
     [data.fixedExpenses]
   )
@@ -92,8 +101,8 @@ export default function Dashboard({ data }) {
     0), [data.cofrinhos, currentMonth]
   )
 
-  const gastosMes   = gastosVariaveis + gastosFixos
-  const prevGastos  = prevGastosVariaveis + gastosFixos
+  const gastosMes   = gastosVariaveis + gastosFixos        // variáveis + fixos não pagos (pagos já em transações)
+  const prevGastos  = prevGastosVariaveis + gastosFixosTotal // aproximação para mês anterior
   const saldoLivre  = totalRenda - gastosMes - depositosCofrinhos
   const pctGuardado = totalRenda > 0 ? ((saldoLivre / totalRenda) * 100).toFixed(0) : 0
 
@@ -114,8 +123,8 @@ export default function Dashboard({ data }) {
       const cofMes = (data.cofrinhos || []).reduce((s, c) =>
         s + c.deposits.filter(d2 => d2.month === key).reduce((ss, d2) => ss + d2.amount, 0), 0)
       const gastos = data.transactions
-        .filter(t => t.date?.startsWith(key))
-        .reduce((s, t) => s + (parseFloat(t.value) || 0), 0) + gastosFixos + cofMes
+        .filter(t => t.date?.startsWith(key) && !t.isFixedExpense)
+        .reduce((s, t) => s + (parseFloat(t.value) || 0), 0) + gastosFixosTotal + cofMes
       return { name: label, Renda: totalRenda, Gastos: gastos }
     }),
     [data.transactions, totalRenda, gastosFixos, data.cofrinhos]

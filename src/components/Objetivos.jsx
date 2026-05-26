@@ -406,8 +406,17 @@ function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources }) {
         </div>
       </div>
 
-      {/* Editar meta/data */}
-      <div style={{ marginTop: 12 }}>
+      {/* Ações rápidas */}
+      <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {goal.adjMonthly > 0 && !goal.achieved && freeSources.length > 0 && (
+          <button
+            className="btn btn-ghost"
+            style={{ fontSize: 12, padding: '5px 12px', color: '#a78bfa', borderColor: '#a78bfa40' }}
+            onClick={() => onDeposit(goal.id, goal.adjMonthly, 'Depósito previsto', depPaidFrom)}
+          >
+            ⚡ Lançar previsto ({fmt(goal.adjMonthly)})
+          </button>
+        )}
         <button
           className="btn btn-ghost"
           style={{ fontSize: 12, padding: '5px 12px' }}
@@ -415,27 +424,27 @@ function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources }) {
         >
           {editing ? '▲ Fechar edição' : '✎ Editar meta & data'}
         </button>
-        {editing && (
-          <div className="obj-edit-row">
-            <div>
-              <label className="form-label">Valor da meta (R$)</label>
-              <input
-                type="number" placeholder="0,00"
-                value={editTarget}
-                onChange={e => setEditTarget(e.target.value)}
-                style={{ fontFamily: 'JetBrains Mono', color: '#c8f500' }}
-              />
-            </div>
-            <div>
-              <label className="form-label">Prazo</label>
-              <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-              <button className="btn btn-green btn-full" onClick={saveEdit}>Salvar</button>
-            </div>
-          </div>
-        )}
       </div>
+      {editing && (
+        <div className="obj-edit-row">
+          <div>
+            <label className="form-label">Valor da meta (R$)</label>
+            <input
+              type="number" placeholder="0,00"
+              value={editTarget}
+              onChange={e => setEditTarget(e.target.value)}
+              style={{ fontFamily: 'JetBrains Mono', color: '#c8f500' }}
+            />
+          </div>
+          <div>
+            <label className="form-label">Prazo</label>
+            <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button className="btn btn-green btn-full" onClick={saveEdit}>Salvar</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

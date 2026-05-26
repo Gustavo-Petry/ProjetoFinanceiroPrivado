@@ -295,7 +295,10 @@ export default function Lancamentos({ data, updateData, showToast }) {
               <div key={tx.id} className="tx-item">
                 <span className="tx-icon">{cat.icon}</span>
                 <div className="tx-info">
-                  <div className="tx-desc">{tx.description}</div>
+                  <div className="tx-desc">
+                    {tx.isFixedExpense && <span style={{ color: '#8888aa', fontSize: 11, marginRight: 5 }}>📌</span>}
+                    {tx.description}
+                  </div>
                   <div className="tx-meta">
                     {tx.category} · {tx.date}
                     {tx.paidFrom && tx.paidFrom !== 'salary' && (
@@ -303,11 +306,12 @@ export default function Lancamentos({ data, updateData, showToast }) {
                         {data.benefits[tx.paidFrom]?.icon} {data.benefits[tx.paidFrom]?.label}
                       </span></>
                     )}
+                    {tx.isFixedExpense && <> · <span style={{ color: '#8888aa' }}>Fixo</span></>}
                   </div>
                 </div>
                 <span className="tx-value">-{fmt(tx.value)}</span>
-                <button className="edit-btn" onClick={() => setEditTx({ ...tx, value: String(tx.value) })}>✎</button>
-                <button className="remove-btn" onClick={() => removeTransaction(tx.id)}>✕</button>
+                {!tx.isFixedExpense && <button className="edit-btn" onClick={() => setEditTx({ ...tx, value: String(tx.value) })}>✎</button>}
+                {!tx.isFixedExpense && <button className="remove-btn" onClick={() => removeTransaction(tx.id)}>✕</button>}
               </div>
             )
           })}
