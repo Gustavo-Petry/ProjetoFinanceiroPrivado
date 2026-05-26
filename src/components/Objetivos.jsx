@@ -90,7 +90,18 @@ export default function Objetivos({ data, updateData, showToast }) {
     const remaining = Math.max(target - saved, 0)
     const achieved  = target > 0 && remaining <= 0
     const months    = Math.max(monthsFromNow(g.targetDate), 0)
-    const idealMonthly = (!achieved && months > 0) ? remaining / months : 0
+
+    // Exclui depósitos do mês atual do cálculo da sugestão:
+    // assim depositar várias vezes no mesmo mês não altera o valor previsto.
+    // Quando o mês vira, both remaining e months diminuem proporcionalmente → sugestão estável.
+    const savedPastMonths      = (g.initialValue || 0) + g.deposits
+      .filter(d => d.month !== currentMonth)
+      .reduce((s, d) => s + d.amount, 0)
+    const remainingForPlanning = Math.max(target - savedPastMonths, 0)
+    const idealMonthly = (!achieved && remainingForPlanning > 0 && months > 0)
+      ? remainingForPlanning / months
+      : 0
+
     return { ...g, target, saved, remaining, achieved, idealMonths: months, idealMonthly }
   }), [goals])
 
