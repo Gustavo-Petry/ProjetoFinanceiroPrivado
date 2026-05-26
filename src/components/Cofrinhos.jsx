@@ -27,10 +27,9 @@ function monthsFromNow(toIso) {
   return (to.getFullYear() - now.getFullYear()) * 12 + (to.getMonth() - now.getMonth())
 }
 
-const months       = getLast6Months()
-const currentMonth = months[5].key
-
 export default function Cofrinhos({ data, updateData, showToast }) {
+  const months       = getLast6Months()
+  const currentMonth = months[5].key
   const [form, setForm] = useState({
     name: '', icon: '🐷', color: '#00f5c8', initialValue: '',
     targetValue: '', isGoal: false, targetDate: '', priority: 'primary',

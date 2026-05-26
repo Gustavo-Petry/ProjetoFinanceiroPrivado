@@ -180,11 +180,32 @@ export default function Dashboard({ data }) {
     return sources
   }, [data.salary, data.benefits, monthTx, allCurrentDeposits])
 
+  // Apenas gastos variáveis (não fixos) para distribution bar
+  const avulsos = useMemo(() =>
+    monthTx.filter(t => !t.isFixedExpense).reduce((s, t) => s + (parseFloat(t.value) || 0), 0),
+    [monthTx]
+  )
+
+  // Top 5 transações do mês por valor
+  const top5 = useMemo(() =>
+    [...monthTx]
+      .sort((a, b) => (parseFloat(b.value) || 0) - (parseFloat(a.value) || 0))
+      .slice(0, 5),
+    [monthTx]
+  )
+
+  // Distribution bar percentages
+  const distBase    = totalRenda || 1
+  const pctDistFixos  = Math.min((gastosFixosTotal / distBase) * 100, 100)
+  const pctDistAvulso = Math.min((avulsos / distBase) * 100, Math.max(100 - pctDistFixos, 0))
+  const pctDistGuard  = Math.min((depositosCofrinhos / distBase) * 100, Math.max(100 - pctDistFixos - pctDistAvulso, 0))
+  const pctDistSobra  = Math.max(100 - pctDistFixos - pctDistAvulso - pctDistGuard, 0)
+
   const budgets = data.budgets || {}
   const hasBudgets = Object.values(budgets).some(v => parseFloat(v) > 0)
   const monthSpendByCategory = useMemo(() => {
     const cats = {}
-    monthTx.forEach(t => {
+    monthTx.filter(t => !t.isFixedExpense).forEach(t => {
       cats[t.category] = (cats[t.category] || 0) + (parseFloat(t.value) || 0)
     })
     return cats
@@ -296,6 +317,55 @@ export default function Dashboard({ data }) {
           )}
         </div>
       </div>
+
+      {/* Distribuição da renda */}
+      {totalRenda > 0 && (
+        <div className="card">
+          <div className="section-title">Distribuição da Renda — este mês</div>
+          <div className="dist-bar">
+            <div className="dist-segment dist-fixos"    style={{ width: `${pctDistFixos}%`  }} title={`Fixos: ${fmt(gastosFixosTotal)}`} />
+            <div className="dist-segment dist-variaveis" style={{ width: `${pctDistAvulso}%` }} title={`Avulsos: ${fmt(avulsos)}`} />
+            <div className="dist-segment dist-cof"      style={{ width: `${pctDistGuard}%`  }} title={`Guardados: ${fmt(depositosCofrinhos)}`} />
+            <div className="dist-segment dist-sobra"    style={{ width: `${pctDistSobra}%`  }} title={`Sobra: ${fmt(saldoLivre)}`} />
+          </div>
+          <div className="dist-legend">
+            {[
+              { label: 'Fixos',    color: '#ff4757', value: gastosFixosTotal,    pct: pctDistFixos   },
+              { label: 'Avulsos',  color: '#ffa502', value: avulsos,             pct: pctDistAvulso  },
+              { label: 'Guardados',color: '#00f5c8', value: depositosCofrinhos,  pct: pctDistGuard   },
+              { label: 'Sobra',    color: '#c8f500', value: Math.max(saldoLivre, 0), pct: pctDistSobra },
+            ].map(item => (
+              <div key={item.label} className="dist-legend-item">
+                <div className="dist-dot" style={{ background: item.color }} />
+                <span className="dist-legend-label">{item.label}</span>
+                <span className="dist-legend-value" style={{ color: item.color }}>{fmt(item.value)}</span>
+                <span className="dist-legend-pct">{item.pct.toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Top 5 transações do mês */}
+      {top5.length > 0 && (
+        <div className="card">
+          <div className="section-title">Top 5 Transações — este mês</div>
+          <div className="top5-list">
+            {top5.map((tx, i) => (
+              <div key={tx.id} className="top5-item">
+                <span className="top5-rank">#{i + 1}</span>
+                <span className="top5-name">
+                  {tx.isFixedExpense && '📌 '}{tx.description || '—'}
+                </span>
+                <span className="top5-cat" style={{ color: CATEGORY_COLORS[tx.category] || '#8888aa' }}>
+                  {tx.category || ''}
+                </span>
+                <span className="top5-value">{fmt(parseFloat(tx.value) || 0)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Orçamento por Categoria */}
       {hasBudgets && (

@@ -29,11 +29,13 @@ const tooltipStyle = {
 const legendFormatter = (v) => <span style={{ color: '#f0f0f8', fontFamily: 'Syne' }}>{v}</span>
 
 const CHART_TYPES = [
-  { id: 'area',    icon: '📈', label: 'Área'    },
-  { id: 'barras',  icon: '📊', label: 'Barras'  },
-  { id: 'pizza',   icon: '🥧', label: 'Pizza'   },
-  { id: 'linha',   icon: '📉', label: 'Linha'   },
-  { id: 'ranking', icon: '🏷️', label: 'Ranking' },
+  { id: 'area',       icon: '📈', label: 'Área'       },
+  { id: 'barras',     icon: '📊', label: 'Barras'     },
+  { id: 'pizza',      icon: '🥧', label: 'Pizza'      },
+  { id: 'linha',      icon: '📉', label: 'Linha'      },
+  { id: 'ranking',    icon: '🏷️', label: 'Ranking'   },
+  { id: 'categorias', icon: '📦', label: 'Categorias' },
+  { id: 'poupanca',   icon: '💰', label: 'Poupança'   },
 ]
 
 export default function Graficos({ data }) {
@@ -63,7 +65,7 @@ export default function Graficos({ data }) {
       const d   = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const varG = data.transactions
-        .filter(t => t.date?.startsWith(key))
+        .filter(t => t.date?.startsWith(key) && !t.isFixedExpense)
         .reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
       return {
         name: d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
@@ -72,6 +74,37 @@ export default function Graficos({ data }) {
       }
     }),
     [data.transactions, totalRenda, fixedTotal]
+  )
+
+  // Dados por categoria ao longo de 6 meses (stacked bar)
+  const categoryMonthlyData = useMemo(() =>
+    Array.from({ length: 6 }, (_, i) => {
+      const d   = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const entry = { name: d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }) }
+      Object.keys(CATEGORY_COLORS).forEach(cat => {
+        entry[cat] = data.transactions
+          .filter(t => t.date?.startsWith(key) && t.category === cat && !t.isFixedExpense)
+          .reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
+      })
+      return entry
+    }),
+    [data.transactions]
+  )
+
+  // Poupança em cofrinhos por mês
+  const savingsData = useMemo(() =>
+    Array.from({ length: 6 }, (_, i) => {
+      const d   = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const cofMes = (data.cofrinhos || []).reduce((s, c) =>
+        s + c.deposits.filter(d2 => d2.month === key).reduce((ss, d2) => ss + d2.amount, 0), 0)
+      return {
+        name: d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
+        Poupança: cofMes,
+      }
+    }),
+    [data.cofrinhos]
   )
 
   const pieData = useMemo(() => {
@@ -243,6 +276,44 @@ export default function Graficos({ data }) {
                 )
               })}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Categorias — stacked bar 6 meses */}
+      {activeCharts.includes('categorias') && (
+        <div className="card">
+          <h3 className="chart-card-title">📦 Gastos por Categoria — 6 meses</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={categoryMonthlyData} barSize={28}>
+              <XAxis dataKey="name" {...axisProps} />
+              <YAxis {...yAxisProps} />
+              <Tooltip {...tooltipStyle} formatter={(v, n) => [fmt(v), n]} />
+              <Legend formatter={legendFormatter} />
+              {Object.entries(CATEGORY_COLORS).map(([cat, color]) => (
+                <Bar key={cat} dataKey={cat} stackId="cats" fill={color} radius={[0, 0, 0, 0]} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Poupança — cofrinhos por mês */}
+      {activeCharts.includes('poupanca') && (
+        <div className="card">
+          <h3 className="chart-card-title">💰 Poupança em Cofrinhos — 6 meses</h3>
+          {savingsData.every(d => d.Poupança === 0) ? (
+            <div className="empty-chart">Nenhum depósito registrado nos últimos 6 meses</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={savingsData} barSize={36}>
+                <XAxis dataKey="name" {...axisProps} />
+                <YAxis {...yAxisProps} />
+                <Tooltip {...tooltipStyle} formatter={(v, n) => [fmt(v), n]} />
+                <Legend formatter={legendFormatter} />
+                <Bar dataKey="Poupança" fill="#00f5c8" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </div>
       )}

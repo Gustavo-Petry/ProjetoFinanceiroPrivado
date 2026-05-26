@@ -197,3 +197,105 @@
   font-weight: 700;
   flex-shrink: 0;
 }
+
+/* ── Distribution bar ── */
+.dist-bar {
+  height: 22px;
+  border-radius: 11px;
+  overflow: hidden;
+  display: flex;
+  margin: 16px 0 14px;
+  background: #ffffff08;
+}
+
+.dist-segment {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+.dist-fixos     { background: #ff4757; }
+.dist-variaveis { background: #ffa502; }
+.dist-cof       { background: #00f5c8; }
+.dist-sobra     { background: #c8f500; }
+
+.dist-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+}
+
+.dist-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dist-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dist-legend-label {
+  font-size: 12px;
+  color: #8888aa;
+}
+
+.dist-legend-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dist-legend-pct {
+  font-size: 11px;
+  color: #555577;
+}
+
+/* ── Top 5 ── */
+.top5-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+.top5-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: #1a1a26;
+  border-radius: 10px;
+}
+
+.top5-rank {
+  font-size: 12px;
+  color: #555577;
+  font-weight: 700;
+  width: 22px;
+  flex-shrink: 0;
+}
+
+.top5-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top5-cat {
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.top5-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ff4757;
+  flex-shrink: 0;
+}

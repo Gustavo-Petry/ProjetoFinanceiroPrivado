@@ -266,6 +266,86 @@
   margin-top: 2px;
 }
 
+/* ── Month timeline ── */
+.obj-month-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff15 transparent;
+}
+
+.obj-month-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  height: 54px;
+  border-radius: 12px;
+  background: #1a1a26;
+  border: 1px solid #ffffff10;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  gap: 2px;
+  padding: 4px 2px;
+}
+
+.obj-month-dot--done {
+  background: #00d68f18;
+  border-color: #00d68f50;
+}
+
+.obj-month-dot--partial {
+  background: #ffa50218;
+  border-color: #ffa50250;
+}
+
+.obj-month-dot--current {
+  border-color: #00f5c870;
+  box-shadow: 0 0 0 1px #00f5c830;
+}
+
+.obj-month-dot--clickable {
+  cursor: pointer;
+}
+
+.obj-month-dot--clickable:hover {
+  background: #ffffff0d;
+  border-color: #ffffff25;
+  transform: translateY(-2px);
+}
+
+.obj-month-dot-label {
+  font-size: 9px;
+  color: #8888aa;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.obj-month-dot-check {
+  font-size: 15px;
+  font-weight: 700;
+  color: #00d68f;
+  line-height: 1;
+}
+
+.obj-month-dot-amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: #ffa502;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50px;
+}
+
 /* ── Alerta de sobra negativa ── */
 .obj-alert {
   background: #ff475715;

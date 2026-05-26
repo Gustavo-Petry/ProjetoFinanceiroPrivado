@@ -21,11 +21,13 @@ function projectedDate(months) {
   return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 }
 
-const _now = new Date()
-const currentMonth = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}`
-
 export default function Objetivos({ data, updateData, showToast }) {
-  // Apenas salário + benefícios livres contam para objetivos
+  // currentMonth computado dinamicamente (não module-level) → reseta corretamente quando o mês vira
+  const currentMonth = useMemo(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  }, [])
+
   const totalRenda = useMemo(() => {
     const sal = parseFloat(data.salary) || 0
     const ben = Object.values(data.benefits).reduce(
@@ -42,23 +44,20 @@ export default function Objetivos({ data, updateData, showToast }) {
   const depositosCofrinhos = useMemo(() =>
     (data.cofrinhos || []).reduce((s, c) =>
       s + c.deposits.filter(d => d.month === currentMonth).reduce((ss, d) => ss + d.amount, 0),
-    0), [data.cofrinhos]
+    0), [data.cofrinhos, currentMonth]
   )
 
-  // Transações do mês atual (para calcular o usado por fonte)
   const monthTx = useMemo(() =>
     data.transactions.filter(t => t.date?.startsWith(currentMonth)),
-    [data.transactions]
+    [data.transactions, currentMonth]
   )
 
-  // Depósitos em cofrinhos no mês atual (com paidFrom)
   const allCurrentDeposits = useMemo(() =>
     (data.cofrinhos || []).flatMap(c =>
       c.deposits.filter(d => d.month === currentMonth && d.paidFrom)
-    ), [data.cofrinhos]
+    ), [data.cofrinhos, currentMonth]
   )
 
-  // Fontes livres: salário + benefícios com free:true
   const freeSources = useMemo(() => {
     const sources = []
     if (data.salary) {
@@ -91,9 +90,6 @@ export default function Objetivos({ data, updateData, showToast }) {
     const achieved  = target > 0 && remaining <= 0
     const months    = Math.max(monthsFromNow(g.targetDate), 0)
 
-    // Exclui depósitos do mês atual do cálculo da sugestão:
-    // assim depositar várias vezes no mesmo mês não altera o valor previsto.
-    // Quando o mês vira, both remaining e months diminuem proporcionalmente → sugestão estável.
     const savedPastMonths      = (g.initialValue || 0) + g.deposits
       .filter(d => d.month !== currentMonth)
       .reduce((s, d) => s + d.amount, 0)
@@ -103,7 +99,7 @@ export default function Objetivos({ data, updateData, showToast }) {
       : 0
 
     return { ...g, target, saved, remaining, achieved, idealMonths: months, idealMonthly }
-  }), [goals])
+  }), [goals, currentMonth])
 
   const totalIdeal  = goalsCalc.reduce((s, g) => s + g.idealMonthly, 0)
   const hasConflict = totalIdeal > disponivel && disponivel > 0 && goals.length > 0
@@ -127,24 +123,24 @@ export default function Objetivos({ data, updateData, showToast }) {
   const pctSobra     = Math.max(0, 100 - pctFixos - pctCofrinhos - pctGoals)
 
   const updateCofrinho = (id, changes) =>
-    updateData({
-      cofrinhos: (data.cofrinhos || []).map(c => c.id === id ? { ...c, ...changes } : c),
-    })
+    updateData({ cofrinhos: (data.cofrinhos || []).map(c => c.id === id ? { ...c, ...changes } : c) })
 
-  const addGoalDeposit = (cofrinhoId, amount, note, paidFrom) => {
+  const addGoalDeposit = (cofrinhoId, amount, note, paidFrom, targetMonth) => {
     if (!amount || amount <= 0) { showToast('Informe um valor válido'); return }
+    const month = targetMonth || currentMonth
     updateData({
       cofrinhos: (data.cofrinhos || []).map(c => c.id === cofrinhoId
         ? { ...c, deposits: [...c.deposits, {
             id: Date.now(), amount, note: note || '',
             date: new Date().toISOString().split('T')[0],
-            month: currentMonth,
+            month,
             paidFrom: paidFrom || 'salary',
           }]}
         : c
       ),
     })
-    showToast('Valor guardado!')
+    const monthLabel = month === currentMonth ? 'este mês' : month
+    showToast(`Valor guardado para ${monthLabel}!`)
   }
 
   const removeFromGoals = (id) => updateCofrinho(id, { isGoal: false })
@@ -160,12 +156,12 @@ export default function Objetivos({ data, updateData, showToast }) {
         <div className="section-title">Planejamento Mensal</div>
 
         <div className="obj-summary-row">
-          <SCard label="Renda Livre"   value={fmt(totalRenda)}                color="#c8f500" />
-          <SCard label="Gastos Fixos"  value={`-${fmt(totalFixos)}`}          color="#ff4757" />
-          <SCard label="Cofrinhos/mês" value={fmt(depositosCofrinhos)}        color="#00f5c8" />
-          <SCard label="Disponível"    value={fmt(disponivel)}                color={disponivel >= 0 ? '#ffa502' : '#ff4757'} />
-          <SCard label="Sugestão/mês"  value={fmt(totalGuardando)}            color="#a78bfa" />
-          <SCard label="Sobra Livre"   value={fmt(sobra)}                     color={sobra >= 0 ? '#c8f500' : '#ff4757'} />
+          <SCard label="Renda Livre"   value={fmt(totalRenda)}         color="#c8f500" />
+          <SCard label="Gastos Fixos"  value={`-${fmt(totalFixos)}`}   color="#ff4757" />
+          <SCard label="Cofrinhos/mês" value={fmt(depositosCofrinhos)} color="#00f5c8" />
+          <SCard label="Disponível"    value={fmt(disponivel)}         color={disponivel >= 0 ? '#ffa502' : '#ff4757'} />
+          <SCard label="Sugestão/mês"  value={fmt(totalGuardando)}     color="#a78bfa" />
+          <SCard label="Sobra Livre"   value={fmt(sobra)}              color={sobra >= 0 ? '#c8f500' : '#ff4757'} />
         </div>
 
         {totalRenda > 0 && (
@@ -185,7 +181,6 @@ export default function Objetivos({ data, updateData, showToast }) {
           </>
         )}
 
-        {/* Disponível por fonte */}
         {freeSources.length > 0 && (
           <div style={{ marginTop: 20 }}>
             <div className="obj-sources-label">Disponível por fonte (livre)</div>
@@ -206,8 +201,7 @@ export default function Objetivos({ data, updateData, showToast }) {
                     <div className="progress-bar" style={{ marginTop: 6 }}>
                       <div style={{
                         background: src.remaining <= 0 ? '#ff4757' : src.color,
-                        height: '100%', borderRadius: 10,
-                        width: `${pct}%`, transition: 'width 0.5s',
+                        height: '100%', borderRadius: 10, width: `${pct}%`, transition: 'width 0.5s',
                       }} />
                     </div>
                   </div>
@@ -223,7 +217,6 @@ export default function Objetivos({ data, updateData, showToast }) {
             Os valores foram ajustados proporcionalmente — algumas metas vão atrasar.
           </div>
         )}
-
         {!hasConflict && sobra < 0 && goals.length > 0 && (
           <div className="obj-alert" style={{ marginTop: 16 }}>
             ⚠️ Sua renda não cobre os gastos fixos — reavalie suas metas.
@@ -247,13 +240,8 @@ export default function Objetivos({ data, updateData, showToast }) {
             <>
               <div className="obj-section-label">🥇 Principal</div>
               {primary.map(g => (
-                <GoalCard
-                  key={g.id} goal={g}
-                  freeSources={freeSources}
-                  onDeposit={addGoalDeposit}
-                  onUpdate={updateCofrinho}
-                  onRemove={removeFromGoals}
-                />
+                <GoalCard key={g.id} goal={g} freeSources={freeSources} currentMonth={currentMonth}
+                  onDeposit={addGoalDeposit} onUpdate={updateCofrinho} onRemove={removeFromGoals} />
               ))}
             </>
           )}
@@ -261,24 +249,16 @@ export default function Objetivos({ data, updateData, showToast }) {
             <>
               <div className="obj-section-label">🥈 Secundário</div>
               {secondary.map(g => (
-                <GoalCard
-                  key={g.id} goal={g}
-                  freeSources={freeSources}
-                  onDeposit={addGoalDeposit}
-                  onUpdate={updateCofrinho}
-                  onRemove={removeFromGoals}
-                />
+                <GoalCard key={g.id} goal={g} freeSources={freeSources} currentMonth={currentMonth}
+                  onDeposit={addGoalDeposit} onUpdate={updateCofrinho} onRemove={removeFromGoals} />
               ))}
             </>
           )}
         </div>
       )}
-
     </div>
   )
 }
-
-// ── Sub-componentes ──────────────────────────────────────────────
 
 function SCard({ label, value, color }) {
   return (
@@ -289,7 +269,7 @@ function SCard({ label, value, color }) {
   )
 }
 
-function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources }) {
+function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources, currentMonth }) {
   const [depAmount,   setDepAmount]   = useState('')
   const [depNote,     setDepNote]     = useState('')
   const [depPaidFrom, setDepPaidFrom] = useState(freeSources[0]?.key || 'salary')
@@ -301,7 +281,24 @@ function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources }) {
   const isPrimary = goal.priority === 'primary'
   const color     = isPrimary ? '#c8f500' : '#00f5c8'
 
-  const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+  // Timeline de meses do atual até o prazo
+  const monthTimeline = useMemo(() => {
+    if (!goal.targetDate) return []
+    const result = []
+    const start = new Date(); start.setDate(1); start.setHours(0,0,0,0)
+    const end   = new Date(goal.targetDate + 'T12:00:00'); end.setDate(1)
+    let d = new Date(start)
+    let count = 0
+    while (d <= end && count < 24) {
+      const key       = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const label     = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
+      const deposited = goal.deposits.filter(dep => dep.month === key).reduce((s, dep) => s + dep.amount, 0)
+      result.push({ key, label, deposited, isCurrent: key === currentMonth })
+      d = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+      count++
+    }
+    return result
+  }, [goal.targetDate, goal.deposits, currentMonth])
 
   const handleDeposit = () => {
     const amount = parseFloat(depAmount)
@@ -310,11 +307,15 @@ function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources }) {
     setDepNote('')
   }
 
+  const handleMonthClick = (m) => {
+    if (goal.adjMonthly <= 0) return
+    const toDeposit = parseFloat((Math.max(goal.adjMonthly - m.deposited, 0)).toFixed(2))
+    if (toDeposit <= 0) return
+    onDeposit(goal.id, toDeposit, 'Depósito previsto', depPaidFrom, m.key)
+  }
+
   const saveEdit = () => {
-    onUpdate(goal.id, {
-      targetValue: parseFloat(editTarget) || 0,
-      targetDate:  editDate,
-    })
+    onUpdate(goal.id, { targetValue: parseFloat(editTarget) || 0, targetDate: editDate })
     setEditing(false)
   }
 
@@ -322,17 +323,16 @@ function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources }) {
 
   return (
     <div className={`card obj-goal-card ${isPrimary ? 'obj-goal-primary' : 'obj-goal-secondary'}`}>
+
+      {/* Cabeçalho */}
       <div className="obj-goal-header">
         <div className="obj-goal-left">
           <span className="obj-goal-icon">{goal.icon}</span>
           <div>
             <div className="obj-goal-name">{goal.name}</div>
-            <div className="obj-goal-meta">
-              Meta: {fmt(goal.target)} · Prazo: {fmtDate(goal.targetDate)}
-            </div>
+            <div className="obj-goal-meta">Meta: {fmt(goal.target)} · Prazo: {fmtDate(goal.targetDate)}</div>
           </div>
         </div>
-
         <div className="obj-goal-right">
           {goal.achieved ? (
             <div style={{ color: '#c8f500', fontSize: 14, fontWeight: 700 }}>✓ Meta atingida!</div>
@@ -350,20 +350,18 @@ function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources }) {
                   ⚠️ Vai atrasar {goal.delayMonths} {goal.delayMonths === 1 ? 'mês' : 'meses'}
                   {goal.adjMonths != null && ` → ${projectedDate(goal.adjMonths)}`}
                 </div>
-              ) : (
-                goal.adjMonths != null && (
-                  <div className="obj-goal-reach">
-                    {goal.adjMonths} {goal.adjMonths === 1 ? 'mês' : 'meses'} → {projectedDate(goal.adjMonths)}
-                  </div>
-                )
+              ) : goal.adjMonths != null && (
+                <div className="obj-goal-reach">
+                  {goal.adjMonths} {goal.adjMonths === 1 ? 'mês' : 'meses'} → {projectedDate(goal.adjMonths)}
+                </div>
               )}
             </>
           )}
         </div>
-
-        <button className="remove-btn" onClick={() => onRemove(goal.id)} title="Remover dos objetivos (mantém o cofrinho)">✕</button>
+        <button className="remove-btn" onClick={() => onRemove(goal.id)} title="Remover dos objetivos">✕</button>
       </div>
 
+      {/* Barra de progresso */}
       {goal.target > 0 && (
         <>
           <div className="obj-progress-header">
@@ -377,10 +375,44 @@ function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources }) {
         </>
       )}
 
+      {/* Timeline de meses */}
+      {monthTimeline.length > 0 && goal.adjMonthly > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div className="section-title" style={{ marginBottom: 8, fontSize: 11 }}>
+            Meses até o prazo — clique para depositar
+          </div>
+          <div className="obj-month-row">
+            {monthTimeline.map(m => {
+              const done     = m.deposited >= goal.adjMonthly && m.deposited > 0
+              const partial  = m.deposited > 0 && !done
+              const canClick = !done && goal.adjMonthly > 0
+              return (
+                <div
+                  key={m.key}
+                  className={[
+                    'obj-month-dot',
+                    done    ? 'obj-month-dot--done'    : '',
+                    partial ? 'obj-month-dot--partial' : '',
+                    m.isCurrent ? 'obj-month-dot--current' : '',
+                    canClick    ? 'obj-month-dot--clickable' : '',
+                  ].filter(Boolean).join(' ')}
+                  onClick={() => canClick && handleMonthClick(m)}
+                  title={`${m.label}: ${m.deposited > 0 ? fmt(m.deposited) + ' guardado' : 'clique para depositar ' + fmt(goal.adjMonthly)}`}
+                >
+                  <div className="obj-month-dot-label">{m.label}</div>
+                  {done    && <div className="obj-month-dot-check">✓</div>}
+                  {partial && <div className="obj-month-dot-amount">{fmt(m.deposited)}</div>}
+                  {!done && !partial && m.isCurrent && <div className="obj-month-dot-check" style={{ color: '#00f5c8', opacity: 0.5 }}>○</div>}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Guardar valor */}
       <div style={{ marginTop: 14 }}>
         <div className="section-title" style={{ marginBottom: 8 }}>Guardar valor</div>
-
         {freeSources.length > 0 && (
           <div style={{ marginBottom: 8 }}>
             <label className="form-label">Debitar de</label>
@@ -392,24 +424,19 @@ function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources }) {
               ))}
             </select>
             {selectedSource && selectedSource.remaining <= 0 && (
-              <div style={{ color: '#ff4757', fontSize: 12, marginTop: 4 }}>
-                ⚠️ Saldo esgotado nesta fonte
-              </div>
+              <div style={{ color: '#ff4757', fontSize: 12, marginTop: 4 }}>⚠️ Saldo esgotado nesta fonte</div>
             )}
           </div>
         )}
-
         <div className="obj-deposit-row">
           <input
-            type="number" placeholder="Valor (R$)"
-            value={depAmount}
+            type="number" placeholder="Valor (R$)" value={depAmount}
             onChange={e => setDepAmount(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleDeposit()}
             style={{ fontFamily: 'JetBrains Mono', color }}
           />
           <input
-            placeholder="Observação (opcional)"
-            value={depNote}
+            placeholder="Observação (opcional)" value={depNote}
             onChange={e => setDepNote(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleDeposit()}
           />
@@ -440,12 +467,9 @@ function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources }) {
         <div className="obj-edit-row">
           <div>
             <label className="form-label">Valor da meta (R$)</label>
-            <input
-              type="number" placeholder="0,00"
-              value={editTarget}
+            <input type="number" placeholder="0,00" value={editTarget}
               onChange={e => setEditTarget(e.target.value)}
-              style={{ fontFamily: 'JetBrains Mono', color: '#c8f500' }}
-            />
+              style={{ fontFamily: 'JetBrains Mono', color: '#c8f500' }} />
           </div>
           <div>
             <label className="form-label">Prazo</label>
