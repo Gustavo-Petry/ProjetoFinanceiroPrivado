@@ -88,7 +88,7 @@ export default function Objetivos({ data, updateData, showToast }) {
     const target    = parseFloat(g.targetValue) || 0
     const remaining = Math.max(target - saved, 0)
     const achieved  = target > 0 && remaining <= 0
-    const months    = Math.max(monthsFromNow(g.targetDate), 0)
+    const months    = Math.max(monthsFromNow(g.targetDate) - (g.startNextMonth ? 1 : 0), 0)
 
     const savedPastMonths      = (g.initialValue || 0) + g.deposits
       .filter(d => d.month !== currentMonth)
@@ -281,24 +281,27 @@ function GoalCard({ goal, onDeposit, onUpdate, onRemove, freeSources, currentMon
   const isPrimary = goal.priority === 'primary'
   const color     = isPrimary ? '#c8f500' : '#00f5c8'
 
-  // Timeline de meses do atual até o prazo
+  // Timeline de meses: começa no mês atual ou no próximo, dependendo de startNextMonth
   const monthTimeline = useMemo(() => {
     if (!goal.targetDate) return []
     const result = []
-    const start = new Date(); start.setDate(1); start.setHours(0,0,0,0)
-    const end   = new Date(goal.targetDate + 'T12:00:00'); end.setDate(1)
+    const start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0)
+    if (goal.startNextMonth) start.setMonth(start.getMonth() + 1)
+    // primeiro mês visível na timeline (recebe borda teal como "mês ativo")
+    const firstKey = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`
+    const end = new Date(goal.targetDate + 'T12:00:00'); end.setDate(1)
     let d = new Date(start)
     let count = 0
     while (d <= end && count < 24) {
       const key       = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const label     = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
       const deposited = goal.deposits.filter(dep => dep.month === key).reduce((s, dep) => s + dep.amount, 0)
-      result.push({ key, label, deposited, isCurrent: key === currentMonth })
+      result.push({ key, label, deposited, isCurrent: key === firstKey })
       d = new Date(d.getFullYear(), d.getMonth() + 1, 1)
       count++
     }
     return result
-  }, [goal.targetDate, goal.deposits, currentMonth])
+  }, [goal.targetDate, goal.deposits, goal.startNextMonth, currentMonth])
 
   const handleDeposit = () => {
     const amount = parseFloat(depAmount)

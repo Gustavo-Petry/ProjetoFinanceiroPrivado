@@ -33,6 +33,7 @@ export default function Cofrinhos({ data, updateData, showToast }) {
   const [form, setForm] = useState({
     name: '', icon: '🐷', color: '#00f5c8', initialValue: '',
     targetValue: '', isGoal: false, targetDate: '', priority: 'primary',
+    startNextMonth: true,
   })
   const [depositForm, setDepositForm] = useState({})
   const [expanded,    setExpanded]    = useState(null)
@@ -57,10 +58,11 @@ export default function Cofrinhos({ data, updateData, showToast }) {
     const target    = parseFloat(form.targetValue) || 0
     const saved     = parseFloat(form.initialValue) || 0
     const remaining = Math.max(target - saved, 0)
-    const months    = Math.max(monthsFromNow(form.targetDate), 0)
+    const rawMonths = Math.max(monthsFromNow(form.targetDate), 0)
+    const months    = Math.max(rawMonths - (form.startNextMonth ? 1 : 0), 0)
     if (months <= 0 || remaining <= 0) return null
     return { monthly: remaining / months, months, remaining }
-  }, [form.isGoal, form.targetDate, form.targetValue, form.initialValue])
+  }, [form.isGoal, form.targetDate, form.targetValue, form.initialValue, form.startNextMonth])
 
   const addCofrinho = () => {
     if (!form.name.trim()) { showToast('Preencha o nome'); return }
@@ -68,15 +70,16 @@ export default function Cofrinhos({ data, updateData, showToast }) {
     updateData({
       cofrinhos: [...cofrinhos, {
         id: Date.now(), name: form.name, icon: form.icon, color: form.color,
-        initialValue: parseFloat(form.initialValue) || 0,
-        targetValue:  parseFloat(form.targetValue)  || 0,
-        isGoal:       form.isGoal,
-        targetDate:   form.isGoal ? form.targetDate : '',
-        priority:     form.isGoal ? form.priority   : 'primary',
+        initialValue:    parseFloat(form.initialValue) || 0,
+        targetValue:     parseFloat(form.targetValue)  || 0,
+        isGoal:          form.isGoal,
+        targetDate:      form.isGoal ? form.targetDate    : '',
+        priority:        form.isGoal ? form.priority      : 'primary',
+        startNextMonth:  form.isGoal ? form.startNextMonth : false,
         deposits: [],
       }],
     })
-    setForm({ name: '', icon: '🐷', color: '#00f5c8', initialValue: '', targetValue: '', isGoal: false, targetDate: '', priority: 'primary' })
+    setForm({ name: '', icon: '🐷', color: '#00f5c8', initialValue: '', targetValue: '', isGoal: false, targetDate: '', priority: 'primary', startNextMonth: true })
     showToast('Cofrinho criado!')
   }
 
@@ -374,6 +377,25 @@ export default function Cofrinhos({ data, updateData, showToast }) {
                     className={`pill ${form.priority === 'secondary' ? 'active' : ''}`}
                     onClick={() => setForm(p => ({ ...p, priority: 'secondary' }))}
                   >🥈 Secundário</button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label className="form-label">Começa a guardar em</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    className={`pill ${!form.startNextMonth ? 'active' : ''}`}
+                    onClick={() => setForm(p => ({ ...p, startNextMonth: false }))}
+                  >📅 Este mês</button>
+                  <button
+                    className={`pill ${form.startNextMonth ? 'active' : ''}`}
+                    onClick={() => setForm(p => ({ ...p, startNextMonth: true }))}
+                  >⏭️ Próximo mês</button>
+                </div>
+                <div style={{ color: '#8888aa', fontSize: 11, marginTop: 5 }}>
+                  {form.startNextMonth
+                    ? 'O planejamento começa no próximo mês — este mês não entra na conta.'
+                    : 'O valor sugerido já começa a contar a partir deste mês.'}
                 </div>
               </div>
 
