@@ -99,10 +99,16 @@ export default function Dashboard({ data }) {
     0), [data.cofrinhos, currentMonth]
   )
 
-  const gastosMes   = gastosVariaveis + gastosFixos        // variáveis + fixos não pagos (pagos já em transações)
-  const prevGastos  = prevGastosVariaveis + gastosFixosTotal // aproximação para mês anterior
+  const gastosMes = gastosVariaveis + gastosFixos  // variáveis + fixos não pagos (pagos já em transações)
+
+  // Mesmo cálculo mas para o mês anterior — evita contar fixos pagos duas vezes
+  const prevGastosFixos = data.fixedExpenses
+    .filter(f => !(f.paidMonths || []).includes(prevMonth))
+    .reduce((s, f) => s + (parseFloat(f.value) || 0), 0)
+  const prevGastos = prevGastosVariaveis + prevGastosFixos
+
   const saldoLivre  = totalRenda - gastosMes - depositosCofrinhos
-  const pctGuardado = totalRenda > 0 ? ((saldoLivre / totalRenda) * 100).toFixed(0) : 0
+  const pctSobra    = totalRenda > 0 ? ((saldoLivre / totalRenda) * 100).toFixed(0) : 0
 
   const gastosTrend = prevGastos > 0
     ? parseInt(((gastosMes - prevGastos) / prevGastos * 100).toFixed(0))
@@ -149,8 +155,6 @@ export default function Dashboard({ data }) {
     }
     return total / 6
   }, [data.transactions])
-
-  const enabledBenefits = Object.entries(data.benefits).filter(([, b]) => b.enabled && b.value)
 
   // Depósitos em cofrinhos do mês atual com paidFrom definido
   const allCurrentDeposits = useMemo(() =>
@@ -227,7 +231,7 @@ export default function Dashboard({ data }) {
           title="Saldo Livre"
           value={fmt(saldoLivre)}
           color={saldoLivre >= 0 ? '#c8f500' : '#ff4757'}
-          badge={`${pctGuardado}% guardado`}
+          badge={`${pctSobra}% da renda`}
         />
         <KPICard
           title="Cofrinhos este mês"
