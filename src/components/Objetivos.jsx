@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import '../styles/Objetivos.css'
+import { effectiveSalary, effectiveBenefitValue } from '../utils/income'
 
 const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 
@@ -28,13 +29,13 @@ export default function Objetivos({ data, updateData, showToast }) {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   }, [])
 
-  const totalRenda = useMemo(() => {
-    const sal = parseFloat(data.salary) || 0
-    const ben = Object.values(data.benefits).reduce(
-      (s, b) => s + (b.enabled && b.free ? (parseFloat(b.value) || 0) : 0), 0
-    )
-    return sal + ben
-  }, [data.salary, data.benefits])
+  const totalRenda = useMemo(() =>
+    effectiveSalary(data, currentMonth) +
+    Object.values(data.benefits).reduce(
+      (s, b) => s + (b.enabled && b.free ? effectiveBenefitValue(b, currentMonth) : 0), 0
+    ),
+    [data.salary, data.salaryFixed, data.salaryHistory, data.benefits, currentMonth]
+  )
 
   const totalFixos = useMemo(() =>
     data.fixedExpenses.reduce((s, f) => s + (parseFloat(f.value) || 0), 0),
@@ -60,21 +61,22 @@ export default function Objetivos({ data, updateData, showToast }) {
 
   const freeSources = useMemo(() => {
     const sources = []
-    if (data.salary) {
+    const salTotal = effectiveSalary(data, currentMonth)
+    if (salTotal > 0 || data.salary) {
       const usedTx  = monthTx.filter(t => t.paidFrom === 'salary').reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
       const usedDep = allCurrentDeposits.filter(d => d.paidFrom === 'salary').reduce((s, d) => s + d.amount, 0)
-      const total   = parseFloat(data.salary) || 0
-      sources.push({ key: 'salary', label: 'Salário', icon: '💵', color: '#c8f500', total, remaining: total - usedTx - usedDep })
+      sources.push({ key: 'salary', label: 'Salário', icon: '💵', color: '#c8f500', total: salTotal, remaining: salTotal - usedTx - usedDep })
     }
     Object.entries(data.benefits).forEach(([key, b]) => {
-      if (!b.enabled || !b.value || !b.free) return
+      if (!b.enabled || !b.free) return
+      const total = effectiveBenefitValue(b, currentMonth)
+      if (!total && !b.value) return
       const usedTx  = monthTx.filter(t => t.paidFrom === key).reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
       const usedDep = allCurrentDeposits.filter(d => d.paidFrom === key).reduce((s, d) => s + d.amount, 0)
-      const total   = parseFloat(b.value) || 0
       sources.push({ key, label: b.label, icon: b.icon, color: b.color, total, remaining: total - usedTx - usedDep })
     })
     return sources
-  }, [data.salary, data.benefits, monthTx, allCurrentDeposits])
+  }, [data.salary, data.salaryFixed, data.salaryHistory, data.benefits, monthTx, allCurrentDeposits, currentMonth])
 
   const goals = useMemo(() =>
     (data.cofrinhos || []).filter(c => c.isGoal),

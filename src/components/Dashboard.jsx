@@ -4,6 +4,7 @@ import {
   Tooltip, ResponsiveContainer, XAxis, YAxis,
 } from 'recharts'
 import '../styles/Dashboard.css'
+import { effectiveSalary, effectiveBenefitValue, effectiveTotalRenda } from '../utils/income'
 
 const CATEGORY_COLORS = {
   Alimentação: '#ffa502',
@@ -53,13 +54,10 @@ export default function Dashboard({ data }) {
   const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
 
-  const totalRenda = useMemo(() => {
-    const sal = parseFloat(data.salary) || 0
-    const ben = Object.values(data.benefits).reduce(
-      (s, b) => s + (b.enabled ? (parseFloat(b.value) || 0) : 0), 0
-    )
-    return sal + ben
-  }, [data.salary, data.benefits])
+  const totalRenda = useMemo(() =>
+    effectiveTotalRenda(data, currentMonth),
+    [data.salary, data.salaryFixed, data.salaryHistory, data.benefits, currentMonth]
+  )
 
   const monthTx = useMemo(() =>
     data.transactions.filter(t => t.date?.startsWith(currentMonth)),
@@ -125,9 +123,11 @@ export default function Dashboard({ data }) {
       const gastos = data.transactions
         .filter(t => t.date?.startsWith(key) && !t.isFixedExpense)
         .reduce((s, t) => s + (parseFloat(t.value) || 0), 0) + gastosFixosTotal + cofMes
-      return { name: label, Renda: totalRenda, Gastos: gastos }
+      const renda = effectiveSalary(data, key) +
+        Object.values(data.benefits).reduce((s, b) => s + effectiveBenefitValue(b, key), 0)
+      return { name: label, Renda: renda, Gastos: gastos }
     }),
-    [data.transactions, totalRenda, gastosFixos, data.cofrinhos]
+    [data.transactions, data.salary, data.salaryFixed, data.salaryHistory, data.benefits, gastosFixosTotal, data.cofrinhos]
   )
 
   const pieData = useMemo(() => {
@@ -162,23 +162,24 @@ export default function Dashboard({ data }) {
   // Dynamic income: each source minus transactions + goal deposits allocated to it this month
   const incomeSources = useMemo(() => {
     const sources = []
-    if (data.salary) {
+    const salTotal = effectiveSalary(data, currentMonth)
+    if (salTotal > 0 || data.salary) {
       const usedTx  = monthTx.filter(t => t.paidFrom === 'salary').reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
       const usedDep = allCurrentDeposits.filter(d => d.paidFrom === 'salary').reduce((s, d) => s + d.amount, 0)
-      const total   = parseFloat(data.salary) || 0
       const used    = usedTx + usedDep
-      sources.push({ key: 'salary', label: 'Salário', icon: '💵', color: '#c8f500', total, used, remaining: total - used })
+      sources.push({ key: 'salary', label: 'Salário', icon: '💵', color: '#c8f500', total: salTotal, used, remaining: salTotal - used })
     }
     Object.entries(data.benefits).forEach(([key, b]) => {
-      if (!b.enabled || !b.value) return
+      if (!b.enabled) return
+      const total   = effectiveBenefitValue(b, currentMonth)
+      if (!total && !b.value) return
       const usedTx  = monthTx.filter(t => t.paidFrom === key).reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
       const usedDep = allCurrentDeposits.filter(d => d.paidFrom === key).reduce((s, d) => s + d.amount, 0)
-      const total   = parseFloat(b.value) || 0
       const used    = usedTx + usedDep
       sources.push({ key, label: b.label, icon: b.icon, color: b.color, total, used, remaining: total - used })
     })
     return sources
-  }, [data.salary, data.benefits, monthTx, allCurrentDeposits])
+  }, [data.salary, data.salaryFixed, data.salaryHistory, data.benefits, monthTx, allCurrentDeposits, currentMonth])
 
   // Apenas gastos variáveis (não fixos) para distribution bar
   const avulsos = useMemo(() =>

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import '../styles/Lancamentos.css'
+import { effectiveSalary, effectiveBenefitValue, effectiveTotalRenda, recentMonthsList } from '../utils/income'
 
 export const CATEGORIES = [
   { id: 'Alimentação', icon: '🍽️', color: '#ffa502' },
@@ -33,26 +34,27 @@ export default function Lancamentos({ data, updateData, showToast }) {
   const [editTx,      setEditTx]      = useState(null)
   const [showBudgets, setShowBudgets] = useState(false)
 
-  const totalRenda = useMemo(() => {
-    const sal = parseFloat(data.salary) || 0
-    const ben = Object.values(data.benefits).reduce(
-      (s, b) => s + (b.enabled ? (parseFloat(b.value) || 0) : 0), 0
-    )
-    return sal + ben
-  }, [data.salary, data.benefits])
+  const recentMonths = useMemo(() => recentMonthsList(4), [])
+
+  const totalRenda = useMemo(() =>
+    effectiveTotalRenda(data, currentMonth),
+    [data.salary, data.salaryFixed, data.salaryHistory, data.benefits]
+  )
 
   const handleBenefit = (key, field, value) =>
     updateData({ benefits: { ...data.benefits, [key]: { ...data.benefits[key], [field]: value } } })
 
-  // Income sources for "paidFrom" selector (only salary + enabled benefits with value)
   const incomeSources = useMemo(() => {
     const sources = []
-    if (data.salary) sources.push({ key: 'salary', label: '💵 Salário', value: parseFloat(data.salary) || 0 })
+    const salVal = effectiveSalary(data, currentMonth)
+    if (salVal > 0 || data.salary) sources.push({ key: 'salary', label: '💵 Salário', value: salVal })
     Object.entries(data.benefits).forEach(([key, b]) => {
-      if (b.enabled && b.value) sources.push({ key, label: `${b.icon} ${b.label}`, value: parseFloat(b.value) || 0 })
+      if (!b.enabled) return
+      const v = effectiveBenefitValue(b, currentMonth)
+      if (v || b.value) sources.push({ key, label: `${b.icon} ${b.label}`, value: v })
     })
     return sources
-  }, [data.salary, data.benefits])
+  }, [data.salary, data.salaryFixed, data.salaryHistory, data.benefits])
 
   const addTransaction = () => {
     if (!form.description.trim() || !form.value) { showToast('Preencha descrição e valor'); return }
@@ -112,13 +114,43 @@ export default function Lancamentos({ data, updateData, showToast }) {
         <h3 style={{ color: '#c8f500', marginBottom: 18 }}>Salário & Benefícios</h3>
 
         <div className="salary-wrap">
-          <label className="form-label">Salário Mensal</label>
-          <input
-            type="number" placeholder="R$ 0,00"
-            value={data.salary}
-            onChange={e => updateData({ salary: e.target.value })}
-            className="salary-input"
-          />
+          <label className="form-label">Salário</label>
+
+          <div className="benefit-free-wrap" style={{ paddingLeft: 0, marginBottom: 10 }}
+            onClick={() => updateData({ salaryFixed: data.salaryFixed !== false ? false : true })}>
+            <div className={`custom-checkbox${data.salaryFixed !== false ? ' custom-checkbox--checked' : ''}`}
+              style={data.salaryFixed !== false ? { background: '#c8f500', borderColor: '#c8f500' } : {}}>
+              {data.salaryFixed !== false && '✓'}
+            </div>
+            <span className="benefit-free-label" style={{ color: data.salaryFixed !== false ? '#c8f500' : '#555577' }}>
+              Valor fixo todo mês
+            </span>
+          </div>
+
+          {data.salaryFixed !== false ? (
+            <input
+              type="number" placeholder="R$ 0,00"
+              value={data.salary}
+              onChange={e => updateData({ salary: e.target.value })}
+              className="salary-input"
+            />
+          ) : (
+            <div className="salary-monthly-section">
+              <div className="salary-monthly-title">Valor por mês{data.salary ? ` · padrão ${fmt(parseFloat(data.salary))}` : ''}</div>
+              {recentMonths.map(m => (
+                <div key={m.key} className="salary-month-row">
+                  <span className={`salary-month-label${m.isCurrent ? ' salary-month-current' : ''}`}>{m.label}</span>
+                  <input
+                    type="number"
+                    placeholder={data.salary || '0,00'}
+                    value={(data.salaryHistory || {})[m.key] ?? ''}
+                    onChange={e => updateData({ salaryHistory: { ...(data.salaryHistory || {}), [m.key]: e.target.value } })}
+                    className="salary-month-input"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="benefits-list">
@@ -137,14 +169,44 @@ export default function Lancamentos({ data, updateData, showToast }) {
               </div>
               {b.enabled && (
                 <>
-                  <div className="benefit-value-wrap">
-                    <input
-                      type="number" placeholder="R$ 0,00"
-                      value={b.value}
-                      onChange={e => handleBenefit(key, 'value', e.target.value)}
-                      style={{ borderColor: b.color + '50', color: b.color, fontFamily: 'JetBrains Mono' }}
-                    />
+                  <div className="benefit-free-wrap"
+                    onClick={() => handleBenefit(key, 'fixed', b.fixed !== false ? false : true)}>
+                    <div className={`custom-checkbox${b.fixed !== false ? ' custom-checkbox--checked' : ''}`}
+                      style={b.fixed !== false ? { background: b.color, borderColor: b.color } : {}}>
+                      {b.fixed !== false && '✓'}
+                    </div>
+                    <span className="benefit-free-label" style={{ color: b.fixed !== false ? b.color : '#555577' }}>
+                      Valor fixo todo mês
+                    </span>
                   </div>
+
+                  {b.fixed !== false ? (
+                    <div className="benefit-value-wrap">
+                      <input
+                        type="number" placeholder="R$ 0,00"
+                        value={b.value}
+                        onChange={e => handleBenefit(key, 'value', e.target.value)}
+                        style={{ borderColor: b.color + '50', color: b.color, fontFamily: 'JetBrains Mono' }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="salary-monthly-section" style={{ marginLeft: 28, marginTop: 6 }}>
+                      {recentMonths.map(m => (
+                        <div key={m.key} className="salary-month-row">
+                          <span className={`salary-month-label${m.isCurrent ? ' salary-month-current' : ''}`}>{m.label}</span>
+                          <input
+                            type="number"
+                            placeholder={b.value || '0,00'}
+                            value={(b.valueByMonth || {})[m.key] ?? ''}
+                            onChange={e => handleBenefit(key, 'valueByMonth', { ...(b.valueByMonth || {}), [m.key]: e.target.value })}
+                            className="salary-month-input"
+                            style={{ borderColor: b.color + '50', color: b.color }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="benefit-free-wrap" onClick={() => handleBenefit(key, 'free', !b.free)}>
                     <div
                       className={`custom-checkbox${b.free ? ' custom-checkbox--checked' : ''}`}

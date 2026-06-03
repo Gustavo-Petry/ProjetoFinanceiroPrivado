@@ -5,6 +5,7 @@ import {
   XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 import '../styles/Graficos.css'
+import { effectiveSalary, effectiveBenefitValue } from '../utils/income'
 
 const CATEGORY_COLORS = {
   Alimentação: '#ffa502',
@@ -47,13 +48,11 @@ export default function Graficos({ data }) {
   const now = new Date()
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
-  const totalRenda = useMemo(() => {
-    const sal = parseFloat(data.salary) || 0
-    const ben = Object.values(data.benefits).reduce(
-      (s, b) => s + (b.enabled ? (parseFloat(b.value) || 0) : 0), 0
-    )
-    return sal + ben
-  }, [data.salary, data.benefits])
+  const totalRenda = useMemo(() =>
+    effectiveSalary(data, currentMonth) +
+    Object.values(data.benefits).reduce((s, b) => s + effectiveBenefitValue(b, currentMonth), 0),
+    [data.salary, data.salaryFixed, data.salaryHistory, data.benefits, currentMonth]
+  )
 
   const fixedTotal = useMemo(() =>
     data.fixedExpenses.reduce((s, f) => s + (parseFloat(f.value) || 0), 0),
@@ -67,13 +66,15 @@ export default function Graficos({ data }) {
       const varG = data.transactions
         .filter(t => t.date?.startsWith(key) && !t.isFixedExpense)
         .reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
+      const renda = effectiveSalary(data, key) +
+        Object.values(data.benefits).reduce((s, b) => s + effectiveBenefitValue(b, key), 0)
       return {
         name: d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
-        Renda: totalRenda,
+        Renda: renda,
         Gastos: varG + fixedTotal,
       }
     }),
-    [data.transactions, totalRenda, fixedTotal]
+    [data.transactions, data.salary, data.salaryFixed, data.salaryHistory, data.benefits, fixedTotal]
   )
 
   // Dados por categoria ao longo de 6 meses (stacked bar)
