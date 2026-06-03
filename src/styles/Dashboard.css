@@ -198,6 +198,97 @@
   flex-shrink: 0;
 }
 
+/* ── Balanço do Mês ── */
+.balanco-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 40px;
+  margin-top: 16px;
+}
+
+.balanco-col-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #555577;
+  margin-bottom: 8px;
+}
+
+.balanco-row {
+  display: grid;
+  grid-template-columns: 20px 1fr auto 38px;
+  align-items: center;
+  gap: 0 8px;
+  padding: 4px 0;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.balanco-row--total {
+  font-weight: 700;
+  padding-top: 6px;
+}
+
+.balanco-sep {
+  border: none;
+  border-top: 1px solid #ffffff12;
+  margin: 6px 0 2px;
+}
+
+.balanco-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.balanco-label {
+  color: #d0d0e8;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.balanco-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.balanco-pct {
+  font-size: 11px;
+  color: #555577;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.balanco-saldo {
+  display: grid;
+  grid-template-columns: 20px 1fr auto 38px;
+  align-items: center;
+  gap: 0 8px;
+  padding: 8px 12px;
+  margin-top: 10px;
+  background: #c8f50010;
+  border: 1px solid #c8f50030;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 0;
+}
+
+.balanco-saldo--neg {
+  background: #ff475710;
+  border-color: #ff475730;
+}
+
+@media (max-width: 640px) {
+  .balanco-grid { grid-template-columns: 1fr; }
+}
+
 /* ── Distribution bar ── */
 .dist-bar {
   height: 22px;

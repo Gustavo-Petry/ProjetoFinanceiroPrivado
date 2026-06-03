@@ -54,10 +54,14 @@ export default function Dashboard({ data }) {
   const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`
 
+  const salarioEfetivo = effectiveSalary(data, currentMonth)
+
   const totalRenda = useMemo(() =>
     effectiveTotalRenda(data, currentMonth),
     [data.salary, data.salaryFixed, data.salaryHistory, data.benefits, currentMonth]
   )
+
+  const pctOf = (v) => totalRenda > 0 ? ((Math.abs(v) / totalRenda) * 100).toFixed(0) : '0'
 
   const monthTx = useMemo(() =>
     data.transactions.filter(t => t.date?.startsWith(currentMonth)),
@@ -241,6 +245,119 @@ export default function Dashboard({ data }) {
         />
       </div>
 
+      {/* Balanço do Mês */}
+      <div className="card">
+        <div className="section-title">
+          Balanço — {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+        </div>
+        <div className="balanco-grid">
+
+          {/* Entradas */}
+          <div className="balanco-col">
+            <div className="balanco-col-title">Entradas</div>
+            {salarioEfetivo > 0 && (
+              <div className="balanco-row">
+                <span className="balanco-icon">💵</span>
+                <span className="balanco-label">Salário</span>
+                <span className="balanco-value" style={{ color: '#c8f500' }}>{fmt(salarioEfetivo)}</span>
+                <span className="balanco-pct">{pctOf(salarioEfetivo)}%</span>
+              </div>
+            )}
+            {Object.entries(data.benefits).map(([key, b]) => {
+              if (!b.enabled) return null
+              const v = effectiveBenefitValue(b, currentMonth)
+              if (!v && !b.value) return null
+              return (
+                <div key={key} className="balanco-row">
+                  <span className="balanco-icon">{b.icon}</span>
+                  <span className="balanco-label">{b.label}</span>
+                  <span className="balanco-value" style={{ color: b.color }}>{fmt(v)}</span>
+                  <span className="balanco-pct">{pctOf(v)}%</span>
+                </div>
+              )
+            })}
+            <div className="balanco-sep" />
+            <div className="balanco-row balanco-row--total">
+              <span className="balanco-icon" />
+              <span className="balanco-label">Total Renda</span>
+              <span className="balanco-value" style={{ color: '#c8f500' }}>{fmt(totalRenda)}</span>
+              <span className="balanco-pct">100%</span>
+            </div>
+          </div>
+
+          {/* Saídas */}
+          <div className="balanco-col">
+            <div className="balanco-col-title">Saídas</div>
+            <div className="balanco-row">
+              <span className="balanco-icon">📌</span>
+              <span className="balanco-label">Gastos Fixos</span>
+              <span className="balanco-value" style={{ color: '#ff4757' }}>{fmt(gastosFixosTotal)}</span>
+              <span className="balanco-pct">{pctOf(gastosFixosTotal)}%</span>
+            </div>
+            <div className="balanco-row">
+              <span className="balanco-icon">💸</span>
+              <span className="balanco-label">Gastos Variáveis</span>
+              <span className="balanco-value" style={{ color: '#ffa502' }}>{fmt(avulsos)}</span>
+              <span className="balanco-pct">{pctOf(avulsos)}%</span>
+            </div>
+            {depositosCofrinhos > 0 && (
+              <div className="balanco-row">
+                <span className="balanco-icon">🐷</span>
+                <span className="balanco-label">Guardado (cofrinhos)</span>
+                <span className="balanco-value" style={{ color: '#00f5c8' }}>{fmt(depositosCofrinhos)}</span>
+                <span className="balanco-pct">{pctOf(depositosCofrinhos)}%</span>
+              </div>
+            )}
+            <div className="balanco-sep" />
+            <div className="balanco-row balanco-row--total">
+              <span className="balanco-icon" />
+              <span className="balanco-label">Total Saídas</span>
+              <span className="balanco-value" style={{ color: '#ff4757' }}>
+                {fmt(gastosFixosTotal + avulsos + depositosCofrinhos)}
+              </span>
+              <span className="balanco-pct">{pctOf(gastosFixosTotal + avulsos + depositosCofrinhos)}%</span>
+            </div>
+            <div className={`balanco-saldo${saldoLivre < 0 ? ' balanco-saldo--neg' : ''}`}>
+              <span className="balanco-icon">💰</span>
+              <span className="balanco-label">Saldo Livre</span>
+              <span className="balanco-value" style={{ color: saldoLivre >= 0 ? '#c8f500' : '#ff4757' }}>
+                {fmt(saldoLivre)}
+              </span>
+              <span className="balanco-pct" style={{ color: saldoLivre >= 0 ? '#c8f500' : '#ff4757' }}>
+                {pctOf(saldoLivre)}%
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Barra de distribuição integrada */}
+        {totalRenda > 0 && (
+          <>
+            <div className="dist-bar" style={{ marginTop: 20 }}>
+              <div className="dist-segment dist-fixos"     style={{ width: `${pctDistFixos}%`  }} title={`Fixos: ${fmt(gastosFixosTotal)}`} />
+              <div className="dist-segment dist-variaveis" style={{ width: `${pctDistAvulso}%` }} title={`Variáveis: ${fmt(avulsos)}`} />
+              <div className="dist-segment dist-cof"       style={{ width: `${pctDistGuard}%`  }} title={`Guardados: ${fmt(depositosCofrinhos)}`} />
+              <div className="dist-segment dist-sobra"     style={{ width: `${pctDistSobra}%`  }} title={`Sobra: ${fmt(saldoLivre)}`} />
+            </div>
+            <div className="dist-legend">
+              {[
+                { label: 'Fixos',     color: '#ff4757', value: gastosFixosTotal,        pct: pctDistFixos  },
+                { label: 'Variáveis', color: '#ffa502', value: avulsos,                 pct: pctDistAvulso },
+                { label: 'Guardados', color: '#00f5c8', value: depositosCofrinhos,      pct: pctDistGuard  },
+                { label: 'Sobra',     color: '#c8f500', value: Math.max(saldoLivre, 0), pct: pctDistSobra },
+              ].map(item => (
+                <div key={item.label} className="dist-legend-item">
+                  <div className="dist-dot" style={{ background: item.color }} />
+                  <span className="dist-legend-label">{item.label}</span>
+                  <span className="dist-legend-value" style={{ color: item.color }}>{fmt(item.value)}</span>
+                  <span className="dist-legend-pct">{item.pct.toFixed(0)}%</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
       {/* Renda por fonte — dinâmica */}
       {incomeSources.length > 0 && (
         <div className="card">
@@ -322,34 +439,6 @@ export default function Dashboard({ data }) {
           )}
         </div>
       </div>
-
-      {/* Distribuição da renda */}
-      {totalRenda > 0 && (
-        <div className="card">
-          <div className="section-title">Distribuição da Renda — este mês</div>
-          <div className="dist-bar">
-            <div className="dist-segment dist-fixos"    style={{ width: `${pctDistFixos}%`  }} title={`Fixos: ${fmt(gastosFixosTotal)}`} />
-            <div className="dist-segment dist-variaveis" style={{ width: `${pctDistAvulso}%` }} title={`Avulsos: ${fmt(avulsos)}`} />
-            <div className="dist-segment dist-cof"      style={{ width: `${pctDistGuard}%`  }} title={`Guardados: ${fmt(depositosCofrinhos)}`} />
-            <div className="dist-segment dist-sobra"    style={{ width: `${pctDistSobra}%`  }} title={`Sobra: ${fmt(saldoLivre)}`} />
-          </div>
-          <div className="dist-legend">
-            {[
-              { label: 'Fixos',    color: '#ff4757', value: gastosFixosTotal,    pct: pctDistFixos   },
-              { label: 'Avulsos',  color: '#ffa502', value: avulsos,             pct: pctDistAvulso  },
-              { label: 'Guardados',color: '#00f5c8', value: depositosCofrinhos,  pct: pctDistGuard   },
-              { label: 'Sobra',    color: '#c8f500', value: Math.max(saldoLivre, 0), pct: pctDistSobra },
-            ].map(item => (
-              <div key={item.label} className="dist-legend-item">
-                <div className="dist-dot" style={{ background: item.color }} />
-                <span className="dist-legend-label">{item.label}</span>
-                <span className="dist-legend-value" style={{ color: item.color }}>{fmt(item.value)}</span>
-                <span className="dist-legend-pct">{item.pct.toFixed(0)}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Top 5 transações do mês */}
       {top5.length > 0 && (
