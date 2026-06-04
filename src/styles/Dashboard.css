@@ -285,8 +285,34 @@
   border-color: #ff475730;
 }
 
+/* Benefícios vinculados — barra de saldo */
+.balanco-vinculados {
+  border-top: 1px solid #ffffff10;
+  margin-top: 18px;
+  padding-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.balanco-vinc-row {
+  display: grid;
+  grid-template-columns: 20px 1fr 100px auto auto;
+  align-items: center;
+  gap: 0 8px;
+  min-width: 0;
+}
+
+.balanco-vinc-bar {
+  height: 6px;
+  background: #ffffff10;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
 @media (max-width: 640px) {
   .balanco-grid { grid-template-columns: 1fr; }
+  .balanco-vinc-row { grid-template-columns: 20px 1fr auto auto; }
+  .balanco-vinc-bar { display: none; }
 }
 
 /* ── Distribution bar ── */

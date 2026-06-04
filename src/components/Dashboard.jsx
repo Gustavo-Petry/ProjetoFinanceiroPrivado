@@ -61,7 +61,7 @@ export default function Dashboard({ data }) {
     [data.salary, data.salaryFixed, data.salaryHistory, data.benefits, currentMonth]
   )
 
-  const pctOf = (v) => totalRenda > 0 ? ((Math.abs(v) / totalRenda) * 100).toFixed(0) : '0'
+  const pctOf = (v) => rendaLivre > 0 ? ((Math.abs(v) / rendaLivre) * 100).toFixed(0) : '0'
 
   const monthTx = useMemo(() =>
     data.transactions.filter(t => t.date?.startsWith(currentMonth)),
@@ -111,8 +111,9 @@ export default function Dashboard({ data }) {
     .reduce((s, f) => s + (parseFloat(f.value) || 0), 0)
   const prevGastos = prevGastosVariaveis + prevGastosFixos
 
-  const saldoLivre  = totalRenda - gastosMes - depositosCofrinhos
-  const pctSobra    = totalRenda > 0 ? ((saldoLivre / totalRenda) * 100).toFixed(0) : 0
+  // Saldo livre calculado apenas sobre renda livre (salário + benefícios livres)
+  const saldoLivre = rendaLivre - gastosFixosTotal - avulsosFromFree - depositosCofrinhos
+  const pctSobra   = rendaLivre > 0 ? ((saldoLivre / rendaLivre) * 100).toFixed(0) : 0
 
   const gastosTrend = prevGastos > 0
     ? parseInt(((gastosMes - prevGastos) / prevGastos * 100).toFixed(0))
@@ -189,11 +190,47 @@ export default function Dashboard({ data }) {
     return sources
   }, [data.salary, data.salaryFixed, data.salaryHistory, data.benefits, monthTx, allCurrentDeposits, currentMonth])
 
-  // Apenas gastos variáveis (não fixos) para distribution bar
+  // Todos os gastos avulsos (de qualquer fonte) — usado no "Gastos do Mês" e top5
   const avulsos = useMemo(() =>
     monthTx.filter(t => !t.isFixedExpense).reduce((s, t) => s + (parseFloat(t.value) || 0), 0),
     [monthTx]
   )
+
+  // Renda livre = salário + benefícios "livres" (não vinculados a categoria específica)
+  const rendaLivre = useMemo(() =>
+    effectiveSalary(data, currentMonth) +
+    Object.values(data.benefits).reduce(
+      (s, b) => s + (b.enabled && b.free ? effectiveBenefitValue(b, currentMonth) : 0), 0
+    ),
+    [data.salary, data.salaryFixed, data.salaryHistory, data.benefits, currentMonth]
+  )
+
+  // Gastos avulsos pagos com salário ou benefícios livres (exclui vinculados)
+  const avulsosFromFree = useMemo(() =>
+    monthTx.filter(t => {
+      if (t.isFixedExpense) return false
+      const src = t.paidFrom || 'salary'
+      const b = data.benefits[src]
+      return src === 'salary' || !b || !!b.free
+    }).reduce((s, t) => s + (parseFloat(t.value) || 0), 0),
+    [monthTx, data.benefits]
+  )
+
+  // Benefícios vinculados (não livres) com saldo restante do mês
+  const restrictedBenefits = useMemo(() =>
+    Object.entries(data.benefits)
+      .filter(([, b]) => b.enabled && b.free === false)
+      .map(([key, b]) => {
+        const total = effectiveBenefitValue(b, currentMonth)
+        const spent = monthTx
+          .filter(t => !t.isFixedExpense && t.paidFrom === key)
+          .reduce((s, t) => s + (parseFloat(t.value) || 0), 0)
+        return { key, icon: b.icon, label: b.label, color: b.color, total, spent, remaining: total - spent }
+      }),
+    [data.benefits, monthTx, currentMonth]
+  )
+
+  const totalVinculado = restrictedBenefits.reduce((s, b) => s + b.total, 0)
 
   // Top 5 transações do mês por valor
   const top5 = useMemo(() =>
@@ -203,10 +240,10 @@ export default function Dashboard({ data }) {
     [monthTx]
   )
 
-  // Distribution bar percentages
-  const distBase    = totalRenda || 1
+  // Distribution bar percentages — base = renda livre (salário + benefícios livres)
+  const distBase      = rendaLivre || 1
   const pctDistFixos  = Math.min((gastosFixosTotal / distBase) * 100, 100)
-  const pctDistAvulso = Math.min((avulsos / distBase) * 100, Math.max(100 - pctDistFixos, 0))
+  const pctDistAvulso = Math.min((avulsosFromFree / distBase) * 100, Math.max(100 - pctDistFixos, 0))
   const pctDistGuard  = Math.min((depositosCofrinhos / distBase) * 100, Math.max(100 - pctDistFixos - pctDistAvulso, 0))
   const pctDistSobra  = Math.max(100 - pctDistFixos - pctDistAvulso - pctDistGuard, 0)
 
@@ -224,7 +261,12 @@ export default function Dashboard({ data }) {
     <div className="dashboard-grid">
       {/* KPIs */}
       <div className="kpis-row">
-        <KPICard title="Renda Total"   value={fmt(totalRenda)}  color="#c8f500" />
+        <KPICard
+          title="Renda Livre"
+          value={fmt(rendaLivre)}
+          color="#c8f500"
+          sub={totalVinculado > 0 ? `+ ${fmt(totalVinculado)} vinculado` : undefined}
+        />
         <KPICard
           title="Gastos do Mês"
           value={fmt(gastosMes)}
@@ -255,6 +297,8 @@ export default function Dashboard({ data }) {
           {/* Entradas */}
           <div className="balanco-col">
             <div className="balanco-col-title">Entradas</div>
+
+            {/* Salário */}
             {salarioEfetivo > 0 && (
               <div className="balanco-row">
                 <span className="balanco-icon">💵</span>
@@ -263,8 +307,10 @@ export default function Dashboard({ data }) {
                 <span className="balanco-pct">{pctOf(salarioEfetivo)}%</span>
               </div>
             )}
+
+            {/* Benefícios livres (contribuem para o Saldo Livre) */}
             {Object.entries(data.benefits).map(([key, b]) => {
-              if (!b.enabled) return null
+              if (!b.enabled || b.free === false) return null
               const v = effectiveBenefitValue(b, currentMonth)
               if (!v && !b.value) return null
               return (
@@ -276,18 +322,34 @@ export default function Dashboard({ data }) {
                 </div>
               )
             })}
+
             <div className="balanco-sep" />
             <div className="balanco-row balanco-row--total">
               <span className="balanco-icon" />
-              <span className="balanco-label">Total Renda</span>
-              <span className="balanco-value" style={{ color: '#c8f500' }}>{fmt(totalRenda)}</span>
+              <span className="balanco-label">Renda Livre</span>
+              <span className="balanco-value" style={{ color: '#c8f500' }}>{fmt(rendaLivre)}</span>
               <span className="balanco-pct">100%</span>
             </div>
+
+            {/* Benefícios vinculados (uso restrito — NÃO entram no Saldo Livre) */}
+            {restrictedBenefits.length > 0 && (
+              <>
+                <div className="balanco-col-title" style={{ marginTop: 14 }}>Benefícios Vinculados</div>
+                {restrictedBenefits.map(b => (
+                  <div key={b.key} className="balanco-row" style={{ opacity: 0.75 }}>
+                    <span className="balanco-icon">{b.icon}</span>
+                    <span className="balanco-label">{b.label}</span>
+                    <span className="balanco-value" style={{ color: b.color }}>{fmt(b.total)}</span>
+                    <span className="balanco-pct" style={{ color: '#555577' }}>vinc.</span>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
 
           {/* Saídas */}
           <div className="balanco-col">
-            <div className="balanco-col-title">Saídas</div>
+            <div className="balanco-col-title">Saídas (do salário)</div>
             <div className="balanco-row">
               <span className="balanco-icon">📌</span>
               <span className="balanco-label">Gastos Fixos</span>
@@ -297,13 +359,13 @@ export default function Dashboard({ data }) {
             <div className="balanco-row">
               <span className="balanco-icon">💸</span>
               <span className="balanco-label">Gastos Variáveis</span>
-              <span className="balanco-value" style={{ color: '#ffa502' }}>{fmt(avulsos)}</span>
-              <span className="balanco-pct">{pctOf(avulsos)}%</span>
+              <span className="balanco-value" style={{ color: '#ffa502' }}>{fmt(avulsosFromFree)}</span>
+              <span className="balanco-pct">{pctOf(avulsosFromFree)}%</span>
             </div>
             {depositosCofrinhos > 0 && (
               <div className="balanco-row">
                 <span className="balanco-icon">🐷</span>
-                <span className="balanco-label">Guardado (cofrinhos)</span>
+                <span className="balanco-label">Guardado</span>
                 <span className="balanco-value" style={{ color: '#00f5c8' }}>{fmt(depositosCofrinhos)}</span>
                 <span className="balanco-pct">{pctOf(depositosCofrinhos)}%</span>
               </div>
@@ -313,9 +375,9 @@ export default function Dashboard({ data }) {
               <span className="balanco-icon" />
               <span className="balanco-label">Total Saídas</span>
               <span className="balanco-value" style={{ color: '#ff4757' }}>
-                {fmt(gastosFixosTotal + avulsos + depositosCofrinhos)}
+                {fmt(gastosFixosTotal + avulsosFromFree + depositosCofrinhos)}
               </span>
-              <span className="balanco-pct">{pctOf(gastosFixosTotal + avulsos + depositosCofrinhos)}%</span>
+              <span className="balanco-pct">{pctOf(gastosFixosTotal + avulsosFromFree + depositosCofrinhos)}%</span>
             </div>
             <div className={`balanco-saldo${saldoLivre < 0 ? ' balanco-saldo--neg' : ''}`}>
               <span className="balanco-icon">💰</span>
@@ -330,21 +392,44 @@ export default function Dashboard({ data }) {
           </div>
         </div>
 
-        {/* Barra de distribuição integrada */}
-        {totalRenda > 0 && (
+        {/* Saldo dos benefícios vinculados */}
+        {restrictedBenefits.length > 0 && (
+          <div className="balanco-vinculados">
+            <div className="balanco-col-title" style={{ marginBottom: 10 }}>Saldo dos Benefícios Vinculados</div>
+            {restrictedBenefits.map(b => {
+              const pct = b.total > 0 ? Math.min((b.spent / b.total) * 100, 100) : 0
+              return (
+                <div key={b.key} className="balanco-vinc-row">
+                  <span className="balanco-icon">{b.icon}</span>
+                  <span className="balanco-label" style={{ color: b.color, fontWeight: 600 }}>{b.label}</span>
+                  <div className="balanco-vinc-bar">
+                    <div style={{ background: b.color, height: '100%', borderRadius: 4, width: `${pct}%`, transition: 'width 0.5s' }} />
+                  </div>
+                  <span className="balanco-value" style={{ color: b.remaining >= 0 ? b.color : '#ff4757', fontSize: 12 }}>
+                    {fmt(b.remaining)} disp.
+                  </span>
+                  <span className="balanco-pct">{fmt(b.spent)} gastos</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Barra de distribuição da renda livre */}
+        {rendaLivre > 0 && (
           <>
             <div className="dist-bar" style={{ marginTop: 20 }}>
               <div className="dist-segment dist-fixos"     style={{ width: `${pctDistFixos}%`  }} title={`Fixos: ${fmt(gastosFixosTotal)}`} />
-              <div className="dist-segment dist-variaveis" style={{ width: `${pctDistAvulso}%` }} title={`Variáveis: ${fmt(avulsos)}`} />
+              <div className="dist-segment dist-variaveis" style={{ width: `${pctDistAvulso}%` }} title={`Variáveis: ${fmt(avulsosFromFree)}`} />
               <div className="dist-segment dist-cof"       style={{ width: `${pctDistGuard}%`  }} title={`Guardados: ${fmt(depositosCofrinhos)}`} />
               <div className="dist-segment dist-sobra"     style={{ width: `${pctDistSobra}%`  }} title={`Sobra: ${fmt(saldoLivre)}`} />
             </div>
             <div className="dist-legend">
               {[
-                { label: 'Fixos',     color: '#ff4757', value: gastosFixosTotal,        pct: pctDistFixos  },
-                { label: 'Variáveis', color: '#ffa502', value: avulsos,                 pct: pctDistAvulso },
-                { label: 'Guardados', color: '#00f5c8', value: depositosCofrinhos,      pct: pctDistGuard  },
-                { label: 'Sobra',     color: '#c8f500', value: Math.max(saldoLivre, 0), pct: pctDistSobra },
+                { label: 'Fixos',     color: '#ff4757', value: gastosFixosTotal,         pct: pctDistFixos  },
+                { label: 'Variáveis', color: '#ffa502', value: avulsosFromFree,           pct: pctDistAvulso },
+                { label: 'Guardados', color: '#00f5c8', value: depositosCofrinhos,        pct: pctDistGuard  },
+                { label: 'Sobra',     color: '#c8f500', value: Math.max(saldoLivre, 0),  pct: pctDistSobra  },
               ].map(item => (
                 <div key={item.label} className="dist-legend-item">
                   <div className="dist-dot" style={{ background: item.color }} />
